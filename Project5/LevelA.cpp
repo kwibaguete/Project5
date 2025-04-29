@@ -71,7 +71,7 @@ void LevelA::initialise() {
     // Create the background map first
     m_background_map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, BACKGROUND_MAP_DATA, map_texture_id, 1.0f, 16, 16);
 
-    // Then create the main map with all the visible elements
+    // Then create the main map 
     m_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_1_DATA, map_texture_id, 1.0f, 16, 16);
 
     // PLAYER SET-UP

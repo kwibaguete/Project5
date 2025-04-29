@@ -18,6 +18,7 @@
 #include "cmath"
 #include <ctime>
 #include <vector>
+#include <iostream> 
 #include "Entity.h"
 #include "Map.h"
 #include "Scene.h"
@@ -137,14 +138,18 @@ void process_input()
 
             case SDLK_1:
                 // Switch to Level A
+                std::cout << "Switching to Level A" << std::endl; // Debug output
                 g_current_mode = LEVEL_A;
                 g_current_scene = g_level_a;
+                g_current_scene->initialise(); // Re-initialize the level
                 break;
 
             case SDLK_2:
                 // Switch to Level B
+                std::cout << "Switching to Level B" << std::endl; // Debug output
                 g_current_mode = LEVEL_B;
                 g_current_scene = g_level_b;
+                g_current_scene->initialise(); // Re-initialize the level
                 break;
 
             default:
@@ -191,6 +196,7 @@ void update()
 
     // Check if we need to switch scenes
     if (g_current_scene->get_state().next_scene_id == 1 && g_current_mode != LEVEL_B) {
+        std::cout << "Auto-switching to Level B" << std::endl; // Debug output
         g_current_mode = LEVEL_B;
         g_current_scene = g_level_b;
         g_current_scene->initialise();

@@ -4,8 +4,8 @@
 #include <GL/glew.h>
 #endif
 #define GL_GLEXT_PROTOTYPES 1
-#define LEVEL1_WIDTH 20
-#define LEVEL1_HEIGHT 15
+#define LEVEL2_WIDTH 20
+#define LEVEL2_HEIGHT 15
 #define ENEMY_COUNT 1
 
 #include "Scene.h"
@@ -22,8 +22,8 @@
 class LevelB : public Scene {
 private:
     // Level data arrays
-    unsigned int LEVEL_1_DATA[LEVEL1_WIDTH * LEVEL1_HEIGHT];
-    unsigned int BACKGROUND_MAP_DATA[LEVEL1_WIDTH * LEVEL1_HEIGHT];
+    unsigned int LEVEL_2_DATA[LEVEL2_WIDTH * LEVEL2_HEIGHT];
+    unsigned int BACKGROUND_MAP_DATA[LEVEL2_WIDTH * LEVEL2_HEIGHT];
 
     // Additional level-specific state
     Entity* m_key;
@@ -38,6 +38,7 @@ private:
 
     // Texture paths
     const char* SPRITESHEET_FILEPATH = "assets/player.png";
+    const char* ENEMY_FILEPATH = "assets/enemy.png";
     const char* MAP_TILESET_FILEPATH = "assets/house_tileset.png";
     const char* BGM_FILEPATH = "assets/audio/dooblydoo.mp3";
     const char* JUMP_SFX_FILEPATH = "assets/audio/bounce.wav";
