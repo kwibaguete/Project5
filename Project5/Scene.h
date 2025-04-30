@@ -21,16 +21,16 @@
 */
 struct GameState
 {
-    // ————— GAME OBJECTS ————— //
+    //  GAME OBJECTS  //
     Map* map;
     Entity* player;
-    Entity* enemies;
+    Entity** enemies;  // Changed from Entity* enemies to Entity** enemies (array of pointers)
 
-    // ————— AUDIO ————— //
+    //  AUDIO  //
     Mix_Music* bgm;
     Mix_Chunk* jump_sfx;
 
-    // ————— POINTERS TO OTHER SCENES ————— //
+    //  POINTERS TO OTHER SCENES  //
     int next_scene_id;
 };
 

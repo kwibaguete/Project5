@@ -37,18 +37,37 @@ void Entity::ai_walk()
 
 void Entity::ai_guard(Entity* player)
 {
+    // Calculate x and y distances between enemy and player
+    float x_distance = std::abs(m_position.x - player->get_position().x);
+    float y_distance = std::abs(m_position.y - player->get_position().y);
+
+    // Define the detection boundaries
+    const float X_DETECTION_RANGE = 2.0f;
+    const float Y_DETECTION_RANGE = 7.0f;
+    const float BOTTOM_BOUNDARY = -13.0f;
+
+    // Check if the enemy has reached the bottom boundary
+    if (m_position.y <= BOTTOM_BOUNDARY) {
+        // Deactivate the enemy when it reaches the bottom
+        deactivate(); // Fixed: Call deactivate() on this entity
+        return;
+    }
+
     switch (m_ai_state) {
     case IDLE:
-        if (glm::distance(m_position, player->get_position()) < 3.0f) m_ai_state = WALKING;
+        // Stay in place until player is detected within both x and y ranges
+        m_movement = glm::vec3(0.0f, 0.0f, 0.0f);
+
+        // If player is within both x and y detection ranges, switch to walking state
+        if (x_distance < X_DETECTION_RANGE && y_distance < Y_DETECTION_RANGE) {
+            m_ai_state = WALKING;
+        }
         break;
 
     case WALKING:
-        if (m_position.x > player->get_position().x) {
-            m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
-        }
-        else {
-            m_movement = glm::vec3(1.0f, 0.0f, 0.0f);
-        }
+        // When in walking state, move directly down the y-axis
+        m_movement = glm::vec3(0.0f, -1.0f, 0.0f);
+        face_down(); // Make sure the enemy is facing down
         break;
 
     case ATTACKING:
@@ -81,7 +100,7 @@ Entity::Entity(GLuint texture_id, float speed, glm::vec3 acceleration, float jum
     m_animation_time(animation_time), m_texture_id(texture_id), m_velocity(0.0f),
     m_width(width), m_height(height), m_entity_type(EntityType)
 {
-    face_right();
+    face_up();
 
     // Update the set_walking method to handle a 4x3 array
     // We need to copy the 4x3 array into our 4x4 member array
@@ -366,7 +385,6 @@ void Entity::update(float delta_time, Entity* player, Entity* collidable_entitie
     m_model_matrix = glm::mat4(1.0f);
     m_model_matrix = glm::translate(m_model_matrix, m_position);
 }
-
 
 void Entity::render(ShaderProgram* program)
 {

@@ -4,8 +4,8 @@
 #include <GL/glew.h>
 #endif
 #define GL_GLEXT_PROTOTYPES 1
-#define LEVEL2_WIDTH 20
-#define LEVEL2_HEIGHT 15
+#define LEVEL3_WIDTH 20
+#define LEVEL3_HEIGHT 15
 #define ENEMY_COUNT 3
 
 #include "Scene.h"
@@ -19,11 +19,11 @@
 #include "Map.h"
 #include "Utility.h"
 
-class LevelB : public Scene {
+class LevelC : public Scene {
 private:
     // Level data arrays
-    unsigned int LEVEL_2_DATA[LEVEL2_WIDTH * LEVEL2_HEIGHT];
-    unsigned int BACKGROUND_MAP_DATA[LEVEL2_WIDTH * LEVEL2_HEIGHT];
+    unsigned int LEVEL_3_DATA[LEVEL3_WIDTH * LEVEL3_HEIGHT];
+    unsigned int BACKGROUND_MAP_DATA[LEVEL3_WIDTH * LEVEL3_HEIGHT];
 
     // Additional level-specific state
     Entity* m_key;
@@ -46,8 +46,8 @@ private:
 
 public:
     // Constructor/Destructor
-    LevelB();
-    ~LevelB();
+    LevelC();
+    ~LevelC();
 
     // Scene methods (overriding from Scene base class)
     void initialise() override;
@@ -56,5 +56,4 @@ public:
 
     // Additional methods
     void process_input();
-    void check_player_enemy_collision(); // Add this method declaration
 };

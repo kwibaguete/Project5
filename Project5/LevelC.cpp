@@ -1,7 +1,7 @@
-#include "LevelB.h"
+#include "LevelC.h"
 #include "Utility.h"
 
-LevelB::LevelB() {
+LevelC::LevelC() {
     unsigned int level_data[] = {
         128, 133, 80, 80, 80, 132, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 117,
         129, 97, 80, 80, 80, 96, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 97, 118,
@@ -39,8 +39,8 @@ LevelB::LevelB() {
     };
 
     // Copy the data to member arrays
-    for (int i = 0; i < LEVEL2_WIDTH * LEVEL2_HEIGHT; i++) {
-        LEVEL_2_DATA[i] = level_data[i];
+    for (int i = 0; i < LEVEL3_WIDTH * LEVEL3_HEIGHT; i++) {
+        LEVEL_3_DATA[i] = level_data[i];
         BACKGROUND_MAP_DATA[i] = background_data[i];
     }
 
@@ -56,7 +56,7 @@ LevelB::LevelB() {
     m_number_of_enemies = 3; // We'll create 3 enemies
 }
 
-LevelB::~LevelB() {
+LevelC::~LevelC() {
     // Clean up the enemies array
     if (m_game_state.enemies) {
         for (int i = 0; i < m_number_of_enemies; i++) {
@@ -66,15 +66,15 @@ LevelB::~LevelB() {
     }
 }
 
-void LevelB::initialise() {
+void LevelC::initialise() {
     // MAP SET-UP
     GLuint map_texture_id = Utility::load_texture(MAP_TILESET_FILEPATH);
 
     // Create the background map first
-    Map* background_map = new Map(LEVEL2_WIDTH, LEVEL2_HEIGHT, BACKGROUND_MAP_DATA, map_texture_id, 1.0f, 16, 16);
+    Map* background_map = new Map(LEVEL3_WIDTH, LEVEL3_HEIGHT, BACKGROUND_MAP_DATA, map_texture_id, 1.0f, 16, 16);
 
     // Then create the main map with all the visible elements
-    m_game_state.map = new Map(LEVEL2_WIDTH, LEVEL2_HEIGHT, LEVEL_2_DATA, map_texture_id, 1.0f, 16, 16);
+    m_game_state.map = new Map(LEVEL3_WIDTH, LEVEL3_HEIGHT, LEVEL_3_DATA, map_texture_id, 1.0f, 16, 16);
 
     // PLAYER SET-UP
     GLuint player_texture_id = Utility::load_texture(SPRITESHEET_FILEPATH);
@@ -167,7 +167,7 @@ void LevelB::initialise() {
     // Mix_VolumeMusic(MIX_MAX_VOLUME / 16.0f);
 }
 
-void LevelB::process_input() {
+void LevelC::process_input() {
     // If the game is frozen, ignore player input but still check for quit events
     if (m_game_frozen) {
         // Set player movement to zero to ensure they stop
@@ -201,23 +201,7 @@ void LevelB::process_input() {
         m_game_state.player->normalise_movement();
 }
 
-// Add this method to check for collisions between player and enemies
-void LevelB::check_player_enemy_collision() {
-    // Check for collisions with each enemy
-    for (int i = 0; i < m_number_of_enemies; i++) {
-        // Only check active enemies
-        if (m_game_state.enemies[i]->is_active() && m_game_state.enemies[i]->get_entity_type() == ENEMY) {
-            // If player collides with an enemy, set next_scene_id to 2 (LoseScene)
-            if (m_game_state.player->check_collision(m_game_state.enemies[i])) {
-                m_game_state.next_scene_id = 2; // Use 2 for LoseScene
-                return; // Exit after first collision
-            }
-        }
-    }
-}
-
-// Add the collision check to the update method
-void LevelB::update(float delta_time) {
+void LevelC::update(float delta_time) {
     // Handle the freeze timer if the game is frozen
     if (m_game_frozen) {
         m_freeze_timer -= delta_time;
@@ -242,12 +226,9 @@ void LevelB::update(float delta_time) {
             m_game_state.enemies[i]->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
         }
     }
-
-    // Check for collisions between player and enemies
-    check_player_enemy_collision();
 }
 
-void LevelB::render(ShaderProgram* program) {
+void LevelC::render(ShaderProgram* program) {
     // Render in layers: background first, then main map, then entities
     m_game_state.map->render(program);
 

@@ -24,6 +24,7 @@
 #include "Scene.h"
 #include "LevelA.h"
 #include "LevelB.h"
+#include "LoseScene.h" // Add LoseScene header
 
 // ————— CONSTANTS ————— //
 constexpr int WINDOW_WIDTH = 640 * 2,
@@ -47,12 +48,13 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 
 enum AppStatus { RUNNING, TERMINATED };
-enum GameMode { LEVEL_A, LEVEL_B };
+enum GameMode { LEVEL_A, LEVEL_B, LOSE_SCENE }; // Add LOSE_SCENE to GameMode
 
 // ————— VARIABLES ————— //
 Scene* g_current_scene;
 LevelA* g_level_a;
 LevelB* g_level_b;
+LoseScene* g_lose_scene; // Add LoseScene pointer
 GameMode g_current_mode = LEVEL_A;
 
 AppStatus g_app_status = RUNNING;
@@ -108,6 +110,8 @@ void initialise()
     // Initialize our levels
     g_level_a = new LevelA();
     g_level_b = new LevelB();
+    g_lose_scene = new LoseScene(); // Initialize LoseScene
+    g_lose_scene->initialise(); // Initialize the lose scene
 
     // Set the current scene to level A
     g_current_scene = g_level_a;
@@ -138,7 +142,6 @@ void process_input()
 
             case SDLK_1:
                 // Switch to Level A
-                std::cout << "Switching to Level A" << std::endl; // Debug output
                 g_current_mode = LEVEL_A;
                 g_current_scene = g_level_a;
                 g_current_scene->initialise(); // Re-initialize the level
@@ -146,7 +149,6 @@ void process_input()
 
             case SDLK_2:
                 // Switch to Level B
-                std::cout << "Switching to Level B" << std::endl; // Debug output
                 g_current_mode = LEVEL_B;
                 g_current_scene = g_level_b;
                 g_current_scene->initialise(); // Re-initialize the level
@@ -166,9 +168,10 @@ void process_input()
     if (g_current_mode == LEVEL_A) {
         g_level_a->process_input();
     }
-    else {
+    else if (g_current_mode == LEVEL_B) {
         g_level_b->process_input();
     }
+    // No input processing needed for lose scene
 }
 
 void update()
@@ -196,19 +199,30 @@ void update()
 
     // Check if we need to switch scenes
     if (g_current_scene->get_state().next_scene_id == 1 && g_current_mode != LEVEL_B) {
-        std::cout << "Auto-switching to Level B" << std::endl; // Debug output
         g_current_mode = LEVEL_B;
         g_current_scene = g_level_b;
         g_current_scene->initialise();
     }
+    else if (g_current_scene->get_state().next_scene_id == 2 && g_current_mode != LOSE_SCENE) {
+        // Switch to lose scene when next_scene_id is 2
+        g_current_mode = LOSE_SCENE;
+        g_current_scene = g_lose_scene;
+        // No need to re-initialize the lose scene
+    }
 
-    // Update camera to follow player
-    GameState state = g_current_scene->get_state();
-    g_view_matrix = glm::mat4(1.0f);
-    g_view_matrix = glm::translate(g_view_matrix, glm::vec3(
-        -state.player->get_position().x,
-        -state.player->get_position().y,
-        0.0f));
+    // Update camera to follow player, but only in gameplay scenes
+    if (g_current_mode != LOSE_SCENE) {
+        GameState state = g_current_scene->get_state();
+        g_view_matrix = glm::mat4(1.0f);
+        g_view_matrix = glm::translate(g_view_matrix, glm::vec3(
+            -state.player->get_position().x,
+            -state.player->get_position().y,
+            0.0f));
+    }
+    else {
+        // Reset view matrix for lose scene (centered view)
+        g_view_matrix = glm::mat4(1.0f);
+    }
 }
 
 void render()
@@ -229,6 +243,7 @@ void shutdown()
     // Clean up game state
     delete g_level_a;
     delete g_level_b;
+    delete g_lose_scene; 
 }
 
 // ————— GAME LOOP ————— //
