@@ -258,5 +258,39 @@ void LevelC::render(ShaderProgram* program) {
         m_key->render(program);
     }
 
+    if (m_key_collected) {
+        // Save the current view matrix - we'll create a new one for UI
+        glm::mat4 original_view_matrix = glm::mat4(1.0f); // Identity matrix
+
+        // Set up UI view (fixed position regardless of camera)
+        glm::mat4 ui_view_matrix = glm::mat4(1.0f);
+        program->set_view_matrix(ui_view_matrix);
+
+        // Position the key in the top-right corner of the screen
+        glm::mat4 key_model_matrix = glm::mat4(1.0f);
+        key_model_matrix = glm::translate(key_model_matrix, glm::vec3(7.0f, 5.0f, 0.0f));
+        key_model_matrix = glm::scale(key_model_matrix, glm::vec3(0.5f, 0.5f, 1.0f));
+        program->set_model_matrix(key_model_matrix);
+
+        // Render the key in the UI
+        float vertices[] = { -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5 };
+        float tex_coords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
+
+        glBindTexture(GL_TEXTURE_2D, m_key->get_texture_id());
+
+        glVertexAttribPointer(program->get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
+        glEnableVertexAttribArray(program->get_position_attribute());
+        glVertexAttribPointer(program->get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, tex_coords);
+        glEnableVertexAttribArray(program->get_tex_coordinate_attribute());
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glDisableVertexAttribArray(program->get_position_attribute());
+        glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
+
+        // Restore the original view matrix for the next frame
+        program->set_view_matrix(original_view_matrix);
+    }
+
 
 }

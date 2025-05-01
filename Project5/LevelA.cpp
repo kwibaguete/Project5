@@ -221,7 +221,6 @@ void LevelA::update(float delta_time) {
         m_game_state.player->set_velocity(glm::vec3(0.0f));
     }
 
-    // Check if player collects the key using check_collision
     if (m_key_spawned && !m_key_collected) {
         if (m_game_state.player->check_collision(m_key)) {
             m_key_collected = true;
