@@ -107,7 +107,6 @@ void LevelA::initialise() {
 
     GLuint key_texture_id = Utility::load_texture(KEY_FILEPATH);
 
-    // Create key entity (initially inactive)
     m_key = new Entity(
         key_texture_id,         // texture id
         0.0f,                   // speed 
@@ -196,7 +195,7 @@ void LevelA::update(float delta_time) {
         m_key->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
     }
 
-    // Check if player is on the trigger tile (row 6, column 2)
+    // Check if player is on the trigger tile 
     glm::vec3 player_pos = m_game_state.player->get_position();
     int tile_x = floor((player_pos.x + 0.5f));
     int tile_y = floor(-(player_pos.y - 0.5f));
@@ -205,20 +204,19 @@ void LevelA::update(float delta_time) {
     if (!m_key_spawned && !m_key_collected &&
         tile_x >= 1 && tile_x <= 3 && tile_y == 6) {
 
-        // Set the key to spawn at the fixed location (row 6, column 2)
-        float key_x = 2.0f; // Column 2 (0-indexed)
-        float key_y = -6.0f; // Row 6 (0-indexed, negative because y goes down)
+        float key_x = 2.0f; 
+        float key_y = -6.0f; 
 
         m_key_position = glm::vec3(key_x, key_y, 0.0f);
         m_key->set_position(m_key_position);
         m_key->activate();
         m_key_spawned = true;
 
-        // Freeze the game for a short duration when the key spawns
+        // Freeze game
         m_game_frozen = true;
         m_freeze_timer = FREEZE_DURATION;
 
-        // Force player to stop moving immediately
+        // Force player to stop moving
         m_game_state.player->set_movement(glm::vec3(0.0f));
         m_game_state.player->set_velocity(glm::vec3(0.0f));
     }

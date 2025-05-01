@@ -261,4 +261,8 @@ void LevelB::render(ShaderProgram* program) {
             m_game_state.enemies[i]->render(program);
         }
     }
+
+    if (m_game_state.player->get_position().y >= -1.0f) {
+        m_game_state.next_scene_id = 3;  
+    }
 }

@@ -49,7 +49,7 @@ void Entity::ai_guard(Entity* player)
     // Check if the enemy has reached the bottom boundary
     if (m_position.y <= BOTTOM_BOUNDARY) {
         // Deactivate the enemy when it reaches the bottom
-        deactivate(); // Fixed: Call deactivate() on this entity
+        deactivate(); 
         return;
     }
 

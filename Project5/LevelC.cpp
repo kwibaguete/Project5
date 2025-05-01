@@ -3,21 +3,21 @@
 
 LevelC::LevelC() {
     unsigned int level_data[] = {
-        128, 133, 80, 80, 80, 132, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 131, 117,
-        129, 97, 80, 80, 80, 96, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 97, 118,
-        129, 112, 80, 80, 80, 103, 101, 101, 101, 101, 101, 101, 101, 101, 101, 101, 101, 93, 94, 118,
-        129, 100, 80, 80, 80, 98, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 109, 110, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 80, 80, 80, 82, 80, 80, 80, 80, 80, 125, 126, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 80, 80, 80, 82, 80, 80, 80, 80, 80, 141, 142, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 80, 80, 80, 82, 80, 80, 80, 80, 80, 82, 80, 80, 80, 80, 118,
-        129, 82, 80, 80, 80, 80, 80, 80, 82, 80, 80, 80, 80, 80, 82, 80, 80, 80, 80, 118,
-        115, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 130, 80, 80, 119, 114
+        0, 0, 0, 0, 0, 0, 128, 131, 131, 131, 131, 131, 131, 117, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 96, 102, 102, 102, 102, 97, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 103, 101, 87, 88, 101, 112, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 98, 99, 99, 99, 99, 100, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 80, 80, 80, 80, 80, 80, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 80, 80, 80, 80, 80, 80, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 80, 80, 80, 80, 80, 80, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 80, 80, 80, 80, 80, 80, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 129, 80, 80, 80, 80, 80, 80, 118, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 115, 116, 130, 80, 80, 119, 116, 114, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 129, 80, 80, 118, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 129, 80, 80, 118, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 129, 80, 80, 118, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 129, 80, 80, 118, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 129, 80, 80, 118, 0, 0, 0, 0, 0, 0, 0, 0
     };
 
     unsigned int background_data[] = {
@@ -119,41 +119,41 @@ void LevelC::initialise() {
         PLAYER
     );
 
-    // Create an array of enemy pointers
-    m_game_state.enemies = new Entity * [m_number_of_enemies];
+    //m_game_state.enemies = new Entity(
+    //    enemy_texture_id,         // texture id
+    //    5.0f,                      // speed
+    //    enemy_acceleration,       // acceleration
+    //    3.0f,                      // jumping power
+    //    enemy_walking_animation,  // animation index sets
+    //    0.0f,                      // animation time
+    //    3,                         // animation frame amount
+    //    0,                         // current animation index
+    //    6,                         // animation column amount
+    //    6,                         // animation row amount
+    //    0.9f,                      // width
+    //    0.9f,                      // height
+    //    PLAYER
+    //);
 
-    // Initialize each enemy
-    for (int i = 0; i < m_number_of_enemies; i++) {
-        m_game_state.enemies[i] = new Entity(
-            enemy_texture_id,         // texture id
-            3.0f,                     // speed - set directly here
-            enemy_acceleration,       // acceleration
-            3.0f,                     // jumping power
-            enemy_walking_animation,  // animation index sets
-            0.0f,                     // animation time
-            3,                         // animation frame amount
-            0,                         // current animation index
-            6,                         // animation column amount
-            6,                         // animation row amount
-            0.9f,                      // width
-            0.9f,                      // height
-            ENEMY
-        );
+    GLuint key_texture_id = Utility::load_texture(KEY_FILEPATH);
 
-        // Set enemy AI type to GUARD and initial state to IDLE
-        m_game_state.enemies[i]->set_entity_type(ENEMY);
-        m_game_state.enemies[i]->set_ai_type(GUARD);
-        m_game_state.enemies[i]->set_ai_state(IDLE);
-        m_game_state.enemies[i]->face_down();
-    }
+    m_key = new Entity(
+        key_texture_id,         // texture id
+        0.0f,                   // speed 
+        0.5f,                   // width 
+        0.5f,                   // height 
+        PLATFORM                // entity type
+    );
+
+    m_key_spawned = true;
+    m_key_collected = false;
+    m_key->activate();
+
+    m_key_position = glm::vec3(9.5f, -6.0f, 0.0f);
+    m_key->set_position(m_key_position);
 
     // Set player starting position
-    m_game_state.player->set_position(glm::vec3(17.0f, -13.0f, 0.0f));
-
-    // Set different positions for each enemy
-    m_game_state.enemies[0]->set_position(glm::vec3(9.0f, -5.0f, 0.0f));
-    m_game_state.enemies[1]->set_position(glm::vec3(3.0f, -5.0f, 0.0f));
-    m_game_state.enemies[2]->set_position(glm::vec3(4.0f, -5.0f, 0.0f));
+    m_game_state.player->set_position(glm::vec3(9.0f, -13.0f, 0.0f));
 
     // Jumping
     m_game_state.player->set_jumping_power(5.0f);
@@ -213,19 +213,37 @@ void LevelC::update(float delta_time) {
         return; // Skip the rest of the update when frozen
     }
 
+    // Update key position if it's spawned and not collected
+    if (m_key_spawned && !m_key_collected) {
+        // Set the key position - this will actually update the position
+        m_key->set_position(m_key_position);
+
+        // Add this line to update the key entity
+        m_key->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
+    }
+
     // Process player input
     process_input();
 
     // Update player
     m_game_state.player->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
 
-    // Update all enemies
-    for (int i = 0; i < m_number_of_enemies; i++) {
-        // Only update active enemies
-        if (m_game_state.enemies[i]->get_entity_type() == ENEMY) {
-            m_game_state.enemies[i]->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
+    if (m_key_spawned && !m_key_collected) {
+        if (m_game_state.player->check_collision(m_key)) {
+            m_key_collected = true;
+            m_key->deactivate();
+
+            // Freeze game
+            m_game_frozen = true;
+            m_freeze_timer = FREEZE_DURATION;
+
+            // Force player to stop moving
+            m_game_state.player->set_movement(glm::vec3(0.0f));
+            m_game_state.player->set_velocity(glm::vec3(0.0f));
         }
+
     }
+
 }
 
 void LevelC::render(ShaderProgram* program) {
@@ -235,11 +253,10 @@ void LevelC::render(ShaderProgram* program) {
     // Render the player
     m_game_state.player->render(program);
 
-    // Render all enemies
-    for (int i = 0; i < m_number_of_enemies; i++) {
-        // Only render active enemies that are of type ENEMY
-        if (m_game_state.enemies[i]->get_entity_type() == ENEMY && m_game_state.enemies[i]->is_active()) {
-            m_game_state.enemies[i]->render(program);
-        }
+    // Render the key if it's spawned and not collected
+    if (m_key_spawned && !m_key_collected && m_key->is_active()) {
+        m_key->render(program);
     }
+
+
 }

@@ -24,7 +24,8 @@
 #include "Scene.h"
 #include "LevelA.h"
 #include "LevelB.h"
-#include "LoseScene.h" // Add LoseScene header
+#include "LevelC.h"
+#include "LoseScene.h" 
 
 // ————— CONSTANTS ————— //
 constexpr int WINDOW_WIDTH = 640 * 2,
@@ -48,12 +49,13 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 
 enum AppStatus { RUNNING, TERMINATED };
-enum GameMode { LEVEL_A, LEVEL_B, LOSE_SCENE }; // Add LOSE_SCENE to GameMode
+enum GameMode { LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE }; // Add LOSE_SCENE to GameMode
 
 // ————— VARIABLES ————— //
 Scene* g_current_scene;
 LevelA* g_level_a;
 LevelB* g_level_b;
+LevelC* g_level_c;
 LoseScene* g_lose_scene; // Add LoseScene pointer
 GameMode g_current_mode = LEVEL_A;
 
@@ -110,6 +112,7 @@ void initialise()
     // Initialize our levels
     g_level_a = new LevelA();
     g_level_b = new LevelB();
+    g_level_c = new LevelC(); 
     g_lose_scene = new LoseScene(); // Initialize LoseScene
     g_lose_scene->initialise(); // Initialize the lose scene
 
@@ -152,6 +155,12 @@ void process_input()
                 g_current_mode = LEVEL_B;
                 g_current_scene = g_level_b;
                 g_current_scene->initialise(); // Re-initialize the level
+                break;
+
+            case SDLK_3:
+                g_current_mode = LEVEL_B;
+                g_current_scene = g_level_c;
+                g_current_scene->initialise();
                 break;
 
             default:
@@ -209,6 +218,12 @@ void update()
         g_current_scene = g_lose_scene;
         // No need to re-initialize the lose scene
     }
+    else if (g_current_scene->get_state().next_scene_id == 3 && g_current_mode != LEVEL_C) {
+        // Switch to level C when next_scene_id is 3
+        g_current_mode = LEVEL_C;
+        g_current_scene = g_level_c;
+        g_current_scene->initialise(); // Initialize level C
+    }
 
     // Update camera to follow player, but only in gameplay scenes
     if (g_current_mode != LOSE_SCENE) {
@@ -243,7 +258,7 @@ void shutdown()
     // Clean up game state
     delete g_level_a;
     delete g_level_b;
-    delete g_lose_scene; 
+    delete g_lose_scene;
 }
 
 // ————— GAME LOOP ————— //

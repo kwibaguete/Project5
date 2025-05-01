@@ -24,7 +24,7 @@ struct GameState
     //  GAME OBJECTS  //
     Map* map;
     Entity* player;
-    Entity** enemies;  // Changed from Entity* enemies to Entity** enemies (array of pointers)
+    Entity** enemies;  
 
     //  AUDIO  //
     Mix_Music* bgm;
