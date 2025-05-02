@@ -1,5 +1,19 @@
+/**
+* Author: Belinda Weng
+* Assignment: your house
+* Date due: 5/2/2025, 2:00pm
+* I pledge that I have completed this assignment without
+* collaborating with anyone else, in conformance with the
+* NYU School of Engineering Policies and Procedures on
+* Academic Misconduct.
+**/
+
 #include "LevelA.h"
 #include "Utility.h"
+#include <iostream>
+#define LOG(message) std::cout << message << std::endl
+
+Mix_Music* glass_sfx = nullptr;
 
 LevelA::LevelA() {
 
@@ -54,12 +68,12 @@ LevelA::LevelA() {
     m_key = nullptr;
     m_game_state.bgm = nullptr;
     m_game_state.jump_sfx = nullptr;
-    m_game_state.next_scene_id = -1; 
+    m_game_state.next_scene_id = -1;
 
     // Initialize enemy related variables
     m_enemy_active = true;
     m_enemy_following = false;
-    m_enemy_timer = 5.0f; 
+    m_enemy_timer = 5.0f;
     m_enemy_entry_position = glm::vec3(18.0f, -2.0f, 0.0f); // Entry position for enemy
 }
 
@@ -67,6 +81,12 @@ LevelA::~LevelA() {
     // Clean up our background map
     if (m_background_map != nullptr) {
         delete m_background_map;
+    }
+
+    // Clean up sound effects
+    if (m_glass_chunk != nullptr) {
+        Mix_FreeChunk(m_glass_chunk);
+        m_glass_chunk = nullptr;
     }
 }
 
@@ -79,6 +99,8 @@ void LevelA::initialise() {
 
     // Then create the main map 
     m_game_state.map = new Map(LEVEL1_WIDTH, LEVEL1_HEIGHT, LEVEL_1_DATA, map_texture_id, 1.0f, 16, 16);
+
+    glass_sfx = Mix_LoadMUS(BGM_FILEPATH);
 
     // PLAYER SET-UP
     GLuint player_texture_id = Utility::load_texture(SPRITESHEET_FILEPATH);
@@ -135,9 +157,14 @@ void LevelA::initialise() {
     m_game_state.bgm = Mix_LoadMUS(BGM_FILEPATH);
     m_game_state.jump_sfx = Mix_LoadWAV(JUMP_SFX_FILEPATH);
 
+    // Load the glass breaking sound effect
+    m_glass_chunk = Mix_LoadWAV(GLASS_FILEPATH);
+
     // MUSIC!!!!!!!
-    // Mix_PlayMusic(m_game_state.bgm, -1);
-    // Mix_VolumeMusic(MIX_MAX_VOLUME / 16.0f);
+    // Remove or comment out these lines:
+    //Mix_PlayMusic(m_game_state.bgm, -1);
+    //Mix_VolumeMusic(MIX_MAX_VOLUME / 16.0f);
+    //Mix_VolumeMusic(60.0f);
 }
 
 void LevelA::process_input() {
@@ -145,7 +172,7 @@ void LevelA::process_input() {
     if (m_game_frozen) {
         // Force player to stop
         m_game_state.player->set_movement(glm::vec3(0.0f));
-        return; 
+        return;
     }
 
     m_game_state.player->set_movement(glm::vec3(0.0f));
@@ -184,7 +211,7 @@ void LevelA::update(float delta_time) {
             m_game_frozen = false;
             m_show_escape_message = false; // Reset the message flag 
         }
-        return; 
+        return;
     }
 
     // Process player input
@@ -247,7 +274,7 @@ void LevelA::update(float delta_time) {
             update_enemy(delta_time);
 
             if (m_game_state.enemies[0]->check_collision(m_game_state.player)) {
-                m_game_state.next_scene_id = 2; 
+                m_game_state.next_scene_id = 2;
             }
         }
     }
@@ -265,6 +292,30 @@ void LevelA::update(float delta_time) {
     // Check if player is on the trigger tile
     if (!m_key_spawned && !m_key_collected &&
         tile_x >= 1 && tile_x <= 3 && tile_y == 6) {
+
+        // Store the current music so we can resume it
+        extern Mix_Music* g_game_music;
+
+        // Load glass breaking sound as a chunk (sound effect)
+        if (m_glass_chunk == nullptr) {
+            m_glass_chunk = Mix_LoadWAV(GLASS_FILEPATH);
+            if (m_glass_chunk == nullptr) {
+                LOG("Could not load glass sound effect: " << Mix_GetError());
+            }
+        }
+
+        // Pause the background music
+        Mix_PauseMusic();
+
+        // Play the glass breaking sound effect
+        int channel = Mix_PlayChannel(-1, m_glass_chunk, 0);
+
+        // Set up a callback to resume music when the sound effect finishes
+        Mix_ChannelFinished([](int channel) {
+            // Resume the background music
+            Mix_ResumeMusic();
+            });
+
 
         float key_x = 2.0f;
         float key_y = -6.0f;
@@ -284,13 +335,14 @@ void LevelA::update(float delta_time) {
         m_game_state.player->set_velocity(glm::vec3(0.0f));
     }
 
+
     // Check if player is trying to leave without the key
     if (!m_key_collected && m_game_state.player->get_position().y <= -14.0f) {
         // Only trigger this once when the condition is first met
         if (!m_game_frozen) {
             m_game_frozen = true;
-            m_freeze_timer = 2.0f; 
-            m_show_escape_message = true; 
+            m_freeze_timer = 2.0f;
+            m_show_escape_message = true;
 
             // No move
             m_game_state.player->set_movement(glm::vec3(0.0f));
@@ -445,7 +497,7 @@ void LevelA::render(ShaderProgram* program) {
             "Find a way to escape here",
             0.5f,   // text size
             0.01f,  // spacing
-            glm::vec3(-6.0f, -2.5f, 0.0f)); 
+            glm::vec3(-6.0f, -2.5f, 0.0f));
 
         // Restore the original view matrix
         program->set_view_matrix(original_view_matrix);
@@ -454,7 +506,7 @@ void LevelA::render(ShaderProgram* program) {
     // If key is collected, render it in the UI (top-right corner)
     if (m_key_collected) {
         // Save the current view matrix 
-        glm::mat4 original_view_matrix = glm::mat4(1.0f); 
+        glm::mat4 original_view_matrix = glm::mat4(1.0f);
 
         // Set up UI view 
         glm::mat4 ui_view_matrix = glm::mat4(1.0f);

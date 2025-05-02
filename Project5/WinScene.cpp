@@ -1,10 +1,19 @@
+/**
+* Author: Belinda Weng
+* Assignment: your house
+* Date due: 5/2/2025, 2:00pm
+* I pledge that I have completed this assignment without
+* collaborating with anyone else, in conformance with the
+* NYU School of Engineering Policies and Procedures on
+* Academic Misconduct.
+**/
 
 #include "WinScene.h"
 #include "Utility.h"
 
 WinScene::WinScene() {
-    win_message = "YOU WIN!";
-    restart_prompt = "PRESS ENTER TO PLAY AGAIN";
+    win_message = "You escaped!";
+    restart_prompt = "PRESS Q TO EXIT";
 }
 
 void WinScene::initialise() {

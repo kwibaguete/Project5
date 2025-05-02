@@ -1,3 +1,12 @@
+/**
+* Author: Belinda Weng
+* Assignment: your house
+* Date due: 5/2/2025, 2:00pm
+* I pledge that I have completed this assignment without
+* collaborating with anyone else, in conformance with the
+* NYU School of Engineering Policies and Procedures on
+* Academic Misconduct.
+**/
 
 #include "LoseScene.h"
 #include "Utility.h"

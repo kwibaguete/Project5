@@ -46,7 +46,7 @@ private:
     const char* SPRITESHEET_FILEPATH = "assets/player.png";
     const char* ENEMY_FILEPATH = "assets/enemy.png";
     const char* MAP_TILESET_FILEPATH = "assets/house_tileset.png";
-    const char* BGM_FILEPATH = "assets/audio/dooblydoo.mp3";
+    const char* BGM_FILEPATH = "assets/audio/Penumbra.wav";
     const char* JUMP_SFX_FILEPATH = "assets/audio/bounce.wav";
     const char* KEY_FILEPATH = "assets/final_key.png";
 

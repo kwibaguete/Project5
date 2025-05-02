@@ -1,3 +1,13 @@
+/**
+* Author: Belinda Weng
+* Assignment: your house
+* Date due: 5/2/2025, 2:00pm
+* I pledge that I have completed this assignment without
+* collaborating with anyone else, in conformance with the
+* NYU School of Engineering Policies and Procedures on
+* Academic Misconduct.
+**/
+
 #define GL_SILENCE_DEPRECATION
 #define STB_IMAGE_IMPLEMENTATION
 #define LOG(argument) std::cout << argument << '\n'
@@ -43,15 +53,20 @@ VIEWPORT_Y = 0,
 VIEWPORT_WIDTH = WINDOW_WIDTH,
 VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
-constexpr char GAME_WINDOW_NAME[] = "final";
+constexpr char GAME_WINDOW_NAME[] = "your house";
 
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 
+// Path to the background music
+constexpr char BGM_FILEPATH[] = "assets/audio/Penumbra.wav";
+
+constexpr char WOOD_FILEPATH[] = "assets/audio/wood.wav";
+
 enum AppStatus { RUNNING, TERMINATED };
-enum GameMode { MENU_SCENE, LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE, WIN_SCENE }; 
+enum GameMode { MENU_SCENE, LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE, WIN_SCENE };
 
 // ————— VARIABLES ————— //
 Scene* g_current_scene;
@@ -63,6 +78,10 @@ LoseScene* g_lose_scene;
 WinScene* g_win_scene;
 GameMode g_current_mode = MENU_SCENE; // Start with menu scene
 GameMode g_previous_mode = MENU_SCENE;
+
+// Global music variable
+Mix_Music* g_game_music = nullptr;
+Mix_Music* footsteps = nullptr;
 
 // Track if the player has collected the final key
 bool g_has_final_key = false;
@@ -101,6 +120,20 @@ void initialise()
 #ifdef _WINDOWS
     glewInit();
 #endif
+
+    // ————— AUDIO SETUP ————— //
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+
+    g_game_music = Mix_LoadMUS(BGM_FILEPATH);
+    if (g_game_music == nullptr) {
+        LOG("ERROR: Could not load background music.\n");
+    }
+    else {
+        Mix_PlayMusic(g_game_music, -1);
+        Mix_VolumeMusic(60); 
+    }
+
+    footsteps = Mix_LoadMUS(WOOD_FILEPATH);
 
     // ————— VIDEO SETUP ————— //
     glViewport(VIEWPORT_X, VIEWPORT_Y, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
@@ -160,7 +193,7 @@ void process_input()
                 g_previous_mode = g_current_mode;
                 g_current_mode = LEVEL_A;
                 g_current_scene = g_level_a;
-                g_current_scene->initialise(); 
+                g_current_scene->initialise();
                 break;
 
             case SDLK_2:
@@ -168,7 +201,7 @@ void process_input()
                 g_previous_mode = g_current_mode;
                 g_current_mode = LEVEL_B;
                 g_current_scene = g_level_b;
-                g_current_scene->initialise(); 
+                g_current_scene->initialise();
                 break;
 
             case SDLK_3:
@@ -257,7 +290,7 @@ void update()
             if (g_previous_mode == LEVEL_B && g_level_b->get_enemy_active()) {
                 g_level_a->set_enemy_active(true);
                 g_level_a->set_enemy_entry_position(glm::vec3(7.0f, -2.0f, 0.0f));
-                g_level_a->set_enemy_timer(1.0f); 
+                g_level_a->set_enemy_timer(1.0f);
                 g_level_a->set_enemy_following(false); // Will start following after timer
             }
         }
@@ -283,7 +316,7 @@ void update()
             if (g_level_c->get_enemy_active()) {
                 g_level_b->set_enemy_active(true);
                 g_level_b->set_enemy_entry_position(entry_position);
-                g_level_b->set_enemy_timer(1.0f); 
+                g_level_b->set_enemy_timer(1.0f);
                 g_level_b->set_enemy_following(false); // Will start following after timer
             }
         }
@@ -296,7 +329,7 @@ void update()
             if (g_level_a->get_enemy_active()) {
                 g_level_b->set_enemy_active(true);
                 g_level_b->set_enemy_entry_position(entry_position);
-                g_level_b->set_enemy_timer(1.0f); 
+                g_level_b->set_enemy_timer(1.0f);
                 g_level_b->set_enemy_following(false); // Will start following after timer
             }
         }
@@ -355,21 +388,11 @@ void render()
     g_shader_program.set_view_matrix(g_view_matrix);
     glClear(GL_COLOR_BUFFER_BIT);
 
+
     // Set light position to player position in world space
     if (g_current_mode != MENU_SCENE && g_current_mode != LOSE_SCENE && g_current_mode != WIN_SCENE) {
-        GameState state = g_current_scene->get_state();
+        g_shader_program.set_light_position(g_current_scene->get_state().player->get_position().x, g_current_scene->get_state().player->get_position().y, g_current_scene->get_state().player->get_position().z);
 
-        // Get player position
-        glm::vec3 player_position = state.player->get_position();
-
-        glm::vec4 transformed_position = g_view_matrix * glm::vec4(player_position, 1.0f);
-
-        // Set light position to match player position in screen space
-        g_shader_program.set_light_position(
-            transformed_position.x,
-            transformed_position.y,
-            0.0f
-        );
     }
 
     // Render current scene
@@ -380,6 +403,14 @@ void render()
 
 void shutdown()
 {
+    // Free the music resource
+    if (g_game_music != nullptr) {
+        Mix_FreeMusic(g_game_music);
+    }
+
+    // Close the audio system
+    Mix_CloseAudio();
+
     SDL_Quit();
 
     // Clean up game state
