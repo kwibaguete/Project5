@@ -40,7 +40,7 @@ LevelA::LevelA() {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
 
-    // Copy the data to member arrays
+    // Copy data to member arrays
     for (int i = 0; i < LEVEL1_WIDTH * LEVEL1_HEIGHT; i++) {
         LEVEL_1_DATA[i] = level_data[i];
         BACKGROUND_MAP_DATA[i] = background_data[i];
@@ -54,12 +54,17 @@ LevelA::LevelA() {
     m_key = nullptr;
     m_game_state.bgm = nullptr;
     m_game_state.jump_sfx = nullptr;
-    m_game_state.next_scene_id = -1; // Initialize to -1, meaning no scene change
+    m_game_state.next_scene_id = -1; 
+
+    // Initialize enemy related variables
+    m_enemy_active = true;
+    m_enemy_following = false;
+    m_enemy_timer = 5.0f; 
+    m_enemy_entry_position = glm::vec3(18.0f, -2.0f, 0.0f); // Entry position for enemy
 }
 
 LevelA::~LevelA() {
-    // Cleanup is handled in the main shutdown function
-    // But we should clean up our background map
+    // Clean up our background map
     if (m_background_map != nullptr) {
         delete m_background_map;
     }
@@ -116,12 +121,11 @@ void LevelA::initialise() {
         PLATFORM                // entity type
     );
 
-    // Initially deactivate the key
+    // Key is initially deactivated
     m_key->deactivate();
     m_key_spawned = false;
     m_key_collected = false;
 
-    // Set player starting position to be in the middle of the wooden floor area
     m_game_state.player->set_position(glm::vec3(7.0f, -13.0f, 0.0f));
 
     // Jumping
@@ -131,23 +135,21 @@ void LevelA::initialise() {
     m_game_state.bgm = Mix_LoadMUS(BGM_FILEPATH);
     m_game_state.jump_sfx = Mix_LoadWAV(JUMP_SFX_FILEPATH);
 
-    // Uncomment if you want music to play
+    // MUSIC!!!!!!!
     // Mix_PlayMusic(m_game_state.bgm, -1);
     // Mix_VolumeMusic(MIX_MAX_VOLUME / 16.0f);
 }
 
 void LevelA::process_input() {
-    // If the game is frozen, ignore player input but still check for quit events
+    // If the game is frozen, ignore player input
     if (m_game_frozen) {
-        // Set player movement to zero to ensure they stop
+        // Force player to stop
         m_game_state.player->set_movement(glm::vec3(0.0f));
-        return; // Skip the rest of input processing
+        return; 
     }
 
-    // Normal input processing when not frozen
     m_game_state.player->set_movement(glm::vec3(0.0f));
 
-    // Set default speed (walking speed)
     float walking_speed = 5.0f;
     float sprint_speed = 8.0f;
 
@@ -161,11 +163,11 @@ void LevelA::process_input() {
         m_game_state.player->set_speed(sprint_speed);
     }
 
-    // Handle horizontal movement
+    // Right left movement
     if (key_state[SDL_SCANCODE_A])      m_game_state.player->move_left();
     else if (key_state[SDL_SCANCODE_D]) m_game_state.player->move_right();
 
-    // Handle vertical movement independently (not using else if)
+    // Up down movement
     if (key_state[SDL_SCANCODE_W])      m_game_state.player->move_up();
     else if (key_state[SDL_SCANCODE_S]) m_game_state.player->move_down();
 
@@ -174,15 +176,15 @@ void LevelA::process_input() {
 }
 
 void LevelA::update(float delta_time) {
-    // Handle the freeze timer if the game is frozen
     if (m_game_frozen) {
         m_freeze_timer -= delta_time;
 
         // If the freeze timer is up, unfreeze the game
         if (m_freeze_timer <= 0.0f) {
             m_game_frozen = false;
+            m_show_escape_message = false; // Reset the message flag 
         }
-        return; // Skip the rest of the update when frozen
+        return; 
     }
 
     // Process player input
@@ -190,6 +192,65 @@ void LevelA::update(float delta_time) {
 
     // Update player
     m_game_state.player->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
+
+    // Update enemy timer if active
+    if (m_enemy_active) {
+        if (m_enemy_timer > 0) {
+            m_enemy_timer -= delta_time;
+            if (m_enemy_timer <= 0) {
+                // Timer expired, start following
+                m_enemy_following = true;
+
+                // Create enemy if it doesn't exist
+                if (m_game_state.enemies == nullptr) {
+                    // Create an array of enemy pointers
+                    m_game_state.enemies = new Entity * [ENEMY_COUNT];
+
+                    // Initialize the enemy
+                    GLuint enemy_texture_id = Utility::load_texture(ENEMY_FILEPATH);
+
+                    int enemy_walking_animation[6][6] =
+                    {
+                        { 2, 8, 14 },  // LEFT
+                        { 4, 10, 16 },  // RIGHT
+                        { 5, 11, 17 },   // UP
+                        { 3, 9, 15 }    // DOWN
+                    };
+
+                    glm::vec3 enemy_acceleration = glm::vec3(0.0f, 0.0f, 0.0f);
+
+                    m_game_state.enemies[0] = new Entity(
+                        enemy_texture_id,         // texture id
+                        6.0f,                     // speed
+                        enemy_acceleration,       // acceleration
+                        3.0f,                     // jumping power
+                        enemy_walking_animation,  // animation index sets
+                        0.0f,                     // animation time
+                        3,                        // animation frame amount
+                        0,                        // current animation index
+                        6,                        // animation column amount
+                        6,                        // animation row amount
+                        0.9f,                     // width
+                        0.9f,                     // height
+                        ENEMY
+                    );
+                }
+
+                // Place the enemy at entry position
+                m_game_state.enemies[0]->set_position(m_enemy_entry_position);
+                m_game_state.enemies[0]->activate();
+            }
+        }
+
+        // Update enemy if it's following
+        if (m_enemy_following && m_game_state.enemies != nullptr) {
+            update_enemy(delta_time);
+
+            if (m_game_state.enemies[0]->check_collision(m_game_state.player)) {
+                m_game_state.next_scene_id = 2; 
+            }
+        }
+    }
 
     // If the key is active, update it too
     if (m_key_spawned && !m_key_collected) {
@@ -216,10 +277,25 @@ void LevelA::update(float delta_time) {
         // Freeze game
         m_game_frozen = true;
         m_freeze_timer = FREEZE_DURATION;
+        m_show_escape_message = false;
 
-        // Force player to stop moving
+        // Player no move
         m_game_state.player->set_movement(glm::vec3(0.0f));
         m_game_state.player->set_velocity(glm::vec3(0.0f));
+    }
+
+    // Check if player is trying to leave without the key
+    if (!m_key_collected && m_game_state.player->get_position().y <= -14.0f) {
+        // Only trigger this once when the condition is first met
+        if (!m_game_frozen) {
+            m_game_frozen = true;
+            m_freeze_timer = 2.0f; 
+            m_show_escape_message = true; 
+
+            // No move
+            m_game_state.player->set_movement(glm::vec3(0.0f));
+            m_game_state.player->set_velocity(glm::vec3(0.0f));
+        }
     }
 
     if (m_key_spawned && !m_key_collected) {
@@ -228,6 +304,107 @@ void LevelA::update(float delta_time) {
             m_key->deactivate();
         }
     }
+}
+
+
+void LevelA::update_enemy(float delta_time) {
+    // If enemy is not active or game is frozen, don't update
+    if (!m_enemy_active || !m_enemy_following || m_game_frozen) {
+        return;
+    }
+
+
+    glm::vec3 enemy_pos = m_game_state.enemies[0]->get_position();
+    glm::vec3 player_pos = m_game_state.player->get_position();
+
+    // Calculate direction to player
+    glm::vec3 direction = glm::normalize(player_pos - enemy_pos);
+
+    // Check for obstacles in the current direction
+    bool obstacle_ahead = false;
+
+    // Determine which direction the enemy is currently facing
+    glm::vec3 facing_direction(0.0f);
+    if (m_game_state.enemies[0]->get_movement().x > 0) {
+        facing_direction = glm::vec3(1.0f, 0.0f, 0.0f); // Right
+    }
+    else if (m_game_state.enemies[0]->get_movement().x < 0) {
+        facing_direction = glm::vec3(-1.0f, 0.0f, 0.0f); // Left
+    }
+    else if (m_game_state.enemies[0]->get_movement().y > 0) {
+        facing_direction = glm::vec3(0.0f, 1.0f, 0.0f); // Up
+    }
+    else if (m_game_state.enemies[0]->get_movement().y < 0) {
+        facing_direction = glm::vec3(0.0f, -1.0f, 0.0f); // Down
+    }
+
+    // Check if there's an obstacle in the facing direction
+    if (glm::length(facing_direction) > 0) {
+        obstacle_ahead = check_collision_in_direction(m_game_state.enemies[0], facing_direction);
+    }
+
+    // Reset enemy movement
+    m_game_state.enemies[0]->set_movement(glm::vec3(0.0f));
+
+    // If there's an obstacle ahead, change direction toward player
+    if (obstacle_ahead) {
+        // Determine if horizontal or vertical movement is better
+        float x_diff = std::abs(player_pos.x - enemy_pos.x);
+        float y_diff = std::abs(player_pos.y - enemy_pos.y);
+
+        if (x_diff > y_diff) {
+            // Try horizontal movement
+            if (player_pos.x > enemy_pos.x) {
+                m_game_state.enemies[0]->move_right();
+            }
+            else {
+                m_game_state.enemies[0]->move_left();
+            }
+        }
+        else {
+            // Try vertical movement
+            if (player_pos.y > enemy_pos.y) {
+                m_game_state.enemies[0]->move_up();
+            }
+            else {
+                m_game_state.enemies[0]->move_down();
+            }
+        }
+    }
+    else {
+        // No obstacle, move directly toward player
+        if (std::abs(direction.x) > std::abs(direction.y)) {
+            // Move horizontally
+            if (direction.x > 0) {
+                m_game_state.enemies[0]->move_right();
+            }
+            else {
+                m_game_state.enemies[0]->move_left();
+            }
+        }
+        else {
+            // Move vertically
+            if (direction.y > 0) {
+                m_game_state.enemies[0]->move_up();
+            }
+            else {
+                m_game_state.enemies[0]->move_down();
+            }
+        }
+    }
+
+    m_game_state.enemies[0]->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
+}
+
+bool LevelA::check_collision_in_direction(Entity* entity, glm::vec3 direction) {
+    // Check if there's a collision in the given direction
+    glm::vec3 test_position = entity->get_position() + direction * 0.5f;
+
+    // Create a probe point in the direction we're checking
+    float penetration_x = 0;
+    float penetration_y = 0;
+
+    return m_game_state.map->is_solid(test_position, &penetration_x, &penetration_y);
 }
 
 void LevelA::render(ShaderProgram* program) {
@@ -246,46 +423,40 @@ void LevelA::render(ShaderProgram* program) {
     // Render the player
     m_game_state.player->render(program);
 
-    //if (!m_key_collected && m_game_state.player->get_position().y >= -15.0f) {
-    //    // Display message and freeze the game
-    //    if (!m_game_frozen) {
-    //        // Only trigger this once when the condition is first met
-    //        m_game_frozen = true;
-    //        m_freeze_timer = 3.0f; // Set to 3 seconds instead of the default FREEZE_DURATION
+    // Render the enemy if active and following
+    if (m_enemy_active && m_enemy_following && m_game_state.enemies != nullptr) {
+        m_game_state.enemies[0]->render(program);
+    }
 
-    //        // Force player to stop moving
-    //        m_game_state.player->set_movement(glm::vec3(0.0f));
-    //        m_game_state.player->set_velocity(glm::vec3(0.0f));
-    //    }
+    // Only display the text if the game is frozen AND we should show the escape message
+    if (m_game_frozen && m_show_escape_message) {
+        // Save the current view matrix for later
+        glm::mat4 original_view_matrix = glm::mat4(1.0f);
 
-    //    // Save the current view matrix for later restoration
-    //    glm::mat4 original_view_matrix = glm::mat4(1.0f);
+        // Set up UI view 
+        glm::mat4 ui_view_matrix = glm::mat4(1.0f);
+        program->set_view_matrix(ui_view_matrix);
 
-    //    // Set up UI view (fixed position regardless of camera)
-    //    glm::mat4 ui_view_matrix = glm::mat4(1.0f);
-    //    program->set_view_matrix(ui_view_matrix);
+        // Load the font texture (only once)
+        static GLuint font_texture_id = Utility::load_texture("assets/font1.png");
 
-    //    // Load the font texture (only once)
-    //    static GLuint font_texture_id = Utility::load_texture("assets/font1.png");
+        Utility::draw_text(program,
+            font_texture_id,
+            "Find a way to escape here",
+            0.5f,   // text size
+            0.01f,  // spacing
+            glm::vec3(-6.0f, -2.5f, 0.0f)); 
 
-    //    // Draw the text at the bottom of the screen
-    //    Utility::draw_text(program,
-    //        font_texture_id,
-    //        "Find a way to escape the mansion",
-    //        0.5f,   // text size
-    //        0.01f,  // spacing
-    //        glm::vec3(-7.0f, -5.0f, 0.0f)); // position at bottom of screen
-
-    //    // Restore the original view matrix
-    //    program->set_view_matrix(original_view_matrix);
-    //}
+        // Restore the original view matrix
+        program->set_view_matrix(original_view_matrix);
+    }
 
     // If key is collected, render it in the UI (top-right corner)
     if (m_key_collected) {
-        // Save the current view matrix - we'll create a new one for UI
-        glm::mat4 original_view_matrix = glm::mat4(1.0f); // Identity matrix
+        // Save the current view matrix 
+        glm::mat4 original_view_matrix = glm::mat4(1.0f); 
 
-        // Set up UI view (fixed position regardless of camera)
+        // Set up UI view 
         glm::mat4 ui_view_matrix = glm::mat4(1.0f);
         program->set_view_matrix(ui_view_matrix);
 
@@ -315,15 +486,14 @@ void LevelA::render(ShaderProgram* program) {
         program->set_view_matrix(original_view_matrix);
     }
 
-    // Check if player has the final key from Level C and is at the initial spawn point
-    // This uses the global variable g_has_final_key from main.cpp
+    // Check if player has the final key from Level C and is at the exit
     extern bool g_has_final_key;
     if (g_has_final_key &&
         m_game_state.player->get_position().y <= -13.5f &&
         m_game_state.player->get_position().y >= -14.5f &&
         m_game_state.player->get_position().x >= 6.5f &&
         m_game_state.player->get_position().x <= 7.5f) {
-        // Player has won the game!
+
         m_game_state.next_scene_id = 4; // Assuming 4 is the WinScene ID
     }
 

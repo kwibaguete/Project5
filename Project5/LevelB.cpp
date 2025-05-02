@@ -50,10 +50,15 @@ LevelB::LevelB() {
     m_game_state.map = nullptr;
     m_game_state.bgm = nullptr;
     m_game_state.jump_sfx = nullptr;
-    m_game_state.next_scene_id = -1; // Initialize to -1, meaning no scene change
+    m_game_state.next_scene_id = -1; 
 
-    // Set the number of enemies for this level
-    m_number_of_enemies = 3; // We'll create 3 enemies
+    m_number_of_enemies = 3; 
+
+    // Initialize enemy state
+    m_enemy_active = false;
+    m_enemy_following = false;
+    m_enemy_timer = 0.0f;
+    m_enemy_entry_position = glm::vec3(3.0f, -2.0f, 0.0f); 
 }
 
 LevelB::~LevelB() {
@@ -73,13 +78,11 @@ void LevelB::initialise() {
     // Create the background map first
     Map* background_map = new Map(LEVEL2_WIDTH, LEVEL2_HEIGHT, BACKGROUND_MAP_DATA, map_texture_id, 1.0f, 16, 16);
 
-    // Then create the main map with all the visible elements
+    // Create main map
     m_game_state.map = new Map(LEVEL2_WIDTH, LEVEL2_HEIGHT, LEVEL_2_DATA, map_texture_id, 1.0f, 16, 16);
 
-    // PLAYER SET-UP
     GLuint player_texture_id = Utility::load_texture(SPRITESHEET_FILEPATH);
 
-    // ENEMY SET-UP
     GLuint enemy_texture_id = Utility::load_texture(ENEMY_FILEPATH);
 
     // Define the walking animation frames for each direction
@@ -119,14 +122,14 @@ void LevelB::initialise() {
         PLAYER
     );
 
-    // Create an array of enemy pointers
+    // Array of enemy pointers
     m_game_state.enemies = new Entity * [m_number_of_enemies];
 
     // Initialize each enemy
     for (int i = 0; i < m_number_of_enemies; i++) {
         m_game_state.enemies[i] = new Entity(
             enemy_texture_id,         // texture id
-            3.0f,                     // speed - set directly here
+            5.0f,                     // speed - set directly here
             enemy_acceleration,       // acceleration
             3.0f,                     // jumping power
             enemy_walking_animation,  // animation index sets
@@ -147,7 +150,7 @@ void LevelB::initialise() {
         m_game_state.enemies[i]->face_down();
     }
 
-    // Set player starting position
+    // Player starting position
     m_game_state.player->set_position(glm::vec3(17.0f, -13.0f, 0.0f));
 
     // Set different positions for each enemy
@@ -168,17 +171,14 @@ void LevelB::initialise() {
 }
 
 void LevelB::process_input() {
-    // If the game is frozen, ignore player input but still check for quit events
     if (m_game_frozen) {
-        // Set player movement to zero to ensure they stop
         m_game_state.player->set_movement(glm::vec3(0.0f));
-        return; // Skip the rest of input processing
+        return; 
     }
 
-    // Normal input processing when not frozen
     m_game_state.player->set_movement(glm::vec3(0.0f));
 
-    // Set default speed (walking speed)
+    // Set default speed 
     float walking_speed = 5.0f;
     float sprint_speed = 8.0f;
 
@@ -201,24 +201,136 @@ void LevelB::process_input() {
         m_game_state.player->normalise_movement();
 }
 
-// Add this method to check for collisions between player and enemies
-void LevelB::check_player_enemy_collision() {
-    // Check for collisions with each enemy
-    for (int i = 0; i < m_number_of_enemies; i++) {
-        // Only check active enemies
-        if (m_game_state.enemies[i]->is_active() && m_game_state.enemies[i]->get_entity_type() == ENEMY) {
-            // If player collides with an enemy, set next_scene_id to 2 (LoseScene)
-            if (m_game_state.player->check_collision(m_game_state.enemies[i])) {
-                m_game_state.next_scene_id = 2; // Use 2 for LoseScene
-                return; // Exit after first collision
+bool LevelB::check_collision_in_direction(Entity* entity, glm::vec3 direction) {
+    // Check if there's a collision in the given direction
+    glm::vec3 test_position = entity->get_position() + direction * 0.5f;
+
+    // Create a probe point in the direction we're checking
+    float penetration_x = 0;
+    float penetration_y = 0;
+
+    return m_game_state.map->is_solid(test_position, &penetration_x, &penetration_y);
+}
+
+
+void LevelB::update_enemy(float delta_time) {
+    // If enemy is not active or game is frozen, don't update
+    if (!m_enemy_active || m_game_frozen) {
+        return;
+    }
+
+    // If enemy timer is active, count down
+    if (m_enemy_timer > 0) {
+        m_enemy_timer -= delta_time;
+        if (m_enemy_timer <= 0) {
+            // Timer expired, start following
+            m_enemy_following = true;
+            
+            m_game_state.enemies[0]->set_position(m_enemy_entry_position);
+            m_game_state.enemies[0]->activate();
+        }
+        return;
+    }
+
+    // If enemy is not following yet, don't move
+    if (!m_enemy_following) {
+        return;
+    }
+
+    glm::vec3 enemy_pos = m_game_state.enemies[0]->get_position();
+    glm::vec3 player_pos = m_game_state.player->get_position();
+
+    // Calculate direction to player
+    glm::vec3 direction = glm::normalize(player_pos - enemy_pos);
+
+    // Check for obstacles in the current direction
+    bool obstacle_ahead = false;
+
+    // Determine which direction the enemy is currently facing
+    glm::vec3 facing_direction(0.0f);
+    if (m_game_state.enemies[0]->get_movement().x > 0) {
+        facing_direction = glm::vec3(1.0f, 0.0f, 0.0f); // Right
+    }
+    else if (m_game_state.enemies[0]->get_movement().x < 0) {
+        facing_direction = glm::vec3(-1.0f, 0.0f, 0.0f); // Left
+    }
+    else if (m_game_state.enemies[0]->get_movement().y > 0) {
+        facing_direction = glm::vec3(0.0f, 1.0f, 0.0f); // Up
+    }
+    else if (m_game_state.enemies[0]->get_movement().y < 0) {
+        facing_direction = glm::vec3(0.0f, -1.0f, 0.0f); // Down
+    }
+
+    // Check if there's an obstacle in the facing direction
+    if (glm::length(facing_direction) > 0) {
+        obstacle_ahead = check_collision_in_direction(m_game_state.enemies[0], facing_direction);
+    }
+
+    // Reset enemy movement
+    m_game_state.enemies[0]->set_movement(glm::vec3(0.0f));
+
+    // If there's an obstacle ahead, change direction toward player
+    if (obstacle_ahead) {
+        // Determine if horizontal or vertical movement is better
+        float x_diff = std::abs(player_pos.x - enemy_pos.x);
+        float y_diff = std::abs(player_pos.y - enemy_pos.y);
+
+        if (x_diff > y_diff) {
+            // Try horizontal movement
+            if (player_pos.x > enemy_pos.x) {
+                m_game_state.enemies[0]->move_right();
+            }
+            else {
+                m_game_state.enemies[0]->move_left();
+            }
+        }
+        else {
+            // Try vertical movement
+            if (player_pos.y > enemy_pos.y) {
+                m_game_state.enemies[0]->move_up();
+            }
+            else {
+                m_game_state.enemies[0]->move_down();
+            }
+        }
+    }
+    else {
+        // No obstacle, move directly toward player
+        if (std::abs(direction.x) > std::abs(direction.y)) {
+            // Move horizontally
+            if (direction.x > 0) {
+                m_game_state.enemies[0]->move_right();
+            }
+            else {
+                m_game_state.enemies[0]->move_left();
+            }
+        }
+        else {
+            // Move vertically
+            if (direction.y > 0) {
+                m_game_state.enemies[0]->move_up();
+            }
+            else {
+                m_game_state.enemies[0]->move_down();
             }
         }
     }
 }
 
-// Add the collision check to the update method
+void LevelB::check_player_enemy_collision() {
+    // Check for collisions with each enemy
+    for (int i = 0; i < m_number_of_enemies; i++) {
+        if (m_game_state.enemies[i]->is_active() && m_game_state.enemies[i]->get_entity_type() == ENEMY) {
+            // If player collides with an enemy, lose
+            if (m_game_state.player->check_collision(m_game_state.enemies[i])) {
+                m_game_state.next_scene_id = 2; 
+                return; 
+            }
+        }
+    }
+}
+
 void LevelB::update(float delta_time) {
-    // Handle the freeze timer if the game is frozen
     if (m_game_frozen) {
         m_freeze_timer -= delta_time;
 
@@ -238,20 +350,20 @@ void LevelB::update(float delta_time) {
     // Update all enemies
     for (int i = 0; i < m_number_of_enemies; i++) {
         // Only update active enemies
-        if (m_game_state.enemies[i]->get_entity_type() == ENEMY) {
+        if (m_game_state.enemies[i]->get_entity_type() == ENEMY && m_game_state.enemies[i]->is_active()) {
             m_game_state.enemies[i]->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
         }
     }
 
-    // Check for collisions between player and enemies
+    // Update the chasing enemy if active
+    update_enemy(delta_time);
+
     check_player_enemy_collision();
 }
 
 void LevelB::render(ShaderProgram* program) {
-    // Render in layers: background first, then main map, then entities
     m_game_state.map->render(program);
 
-    // Render the player
     m_game_state.player->render(program);
 
     // Render all enemies
@@ -269,8 +381,6 @@ void LevelB::render(ShaderProgram* program) {
 
     // Check if player is at the bottom of the level to go back to Level A
     if (m_game_state.player->get_position().y <= -14.0f) {
-        m_game_state.next_scene_id = 0;  // 0 will represent going back to Level A
+        m_game_state.next_scene_id = 0;  
     }
-
-
 }

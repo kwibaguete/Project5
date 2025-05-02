@@ -31,6 +31,13 @@ private:
     bool m_key_collected = false;
     glm::vec3 m_key_position;
 
+    // Enemy state
+    bool m_enemy_active = false;
+    float m_enemy_timer = 0.0f;
+    const float ENEMY_DELAY = 1.0f;
+    bool m_enemy_following = false;
+    glm::vec3 m_enemy_entry_position;
+
     // freeze effect
     bool m_game_frozen = false;
     float m_freeze_timer = 0.0f;
@@ -56,8 +63,18 @@ public:
 
     // Additional methods
     void process_input();
-    void check_player_enemy_collision(); // Add this method declaration
+    void check_player_enemy_collision();
+    void update_enemy(float delta_time);
+    bool check_collision_in_direction(Entity* entity, glm::vec3 direction);
 
     // Add this method to access the game state
     GameState& get_state() { return m_game_state; }
+
+    // Enemy state setters/getters
+    void set_enemy_active(bool active) { m_enemy_active = active; }
+    bool get_enemy_active() const { return m_enemy_active; }
+    void set_enemy_following(bool following) { m_enemy_following = following; }
+    bool get_enemy_following() const { return m_enemy_following; }
+    void set_enemy_timer(float timer) { m_enemy_timer = timer; }
+    void set_enemy_entry_position(glm::vec3 position) { m_enemy_entry_position = position; }
 };

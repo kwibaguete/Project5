@@ -32,6 +32,9 @@ private:
     GLuint m_vertex_shader;
     GLuint m_fragment_shader;
 
+    GLuint m_light_position_uniform;
+    GLuint m_light_radius_uniform;
+
 public:
 
     void load(const char* vertex_shader_file, const char* fragment_shader_file);
@@ -41,9 +44,14 @@ public:
     void set_view_matrix(const glm::mat4& matrix);
     void set_colour(float red, float green, float blue, float alpha);
 
+    void set_light_position(float x, float y, float z);
+    void set_light_radius(float radius);
+
     GLuint const get_program_id()               const { return m_program_id; };
     GLuint const get_position_attribute()       const { return m_position_attribute; };
     GLuint const get_tex_coordinate_attribute() const { return m_tex_coord_attribute; };
+    GLuint const get_light_position_uniform() const { return m_light_position_uniform; };
+    GLuint const get_light_radius_uniform() const { return m_light_radius_uniform; };
 
     void set_program_id(GLuint program_id) { m_program_id = program_id; };
 };

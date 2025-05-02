@@ -44,36 +44,38 @@ LevelC::LevelC() {
         BACKGROUND_MAP_DATA[i] = background_data[i];
     }
 
-    // Initialize pointers to nullptr
+
     m_game_state.player = nullptr;
     m_game_state.enemies = nullptr;
     m_game_state.map = nullptr;
     m_game_state.bgm = nullptr;
     m_game_state.jump_sfx = nullptr;
-    m_game_state.next_scene_id = -1; // Initialize to -1, meaning no scene change
+    m_game_state.next_scene_id = -1; 
 
-    // Set the number of enemies for this level
-    m_number_of_enemies = 3; // We'll create 3 enemies
+
+    m_number_of_enemies = 1; 
+
+    // Initialize enemy state
+    m_enemy_active = false;
+    m_enemy_following = false;
 }
 
 LevelC::~LevelC() {
     // Clean up the enemies array
     if (m_game_state.enemies) {
-        for (int i = 0; i < m_number_of_enemies; i++) {
-            delete m_game_state.enemies[i];
-        }
+        delete m_game_state.enemies[0];
         delete[] m_game_state.enemies;
     }
 }
 
 void LevelC::initialise() {
-    // MAP SET-UP
+
     GLuint map_texture_id = Utility::load_texture(MAP_TILESET_FILEPATH);
 
-    // Create the background map first
+
     Map* background_map = new Map(LEVEL3_WIDTH, LEVEL3_HEIGHT, BACKGROUND_MAP_DATA, map_texture_id, 1.0f, 16, 16);
 
-    // Then create the main map with all the visible elements
+
     m_game_state.map = new Map(LEVEL3_WIDTH, LEVEL3_HEIGHT, LEVEL_3_DATA, map_texture_id, 1.0f, 16, 16);
 
     // PLAYER SET-UP
@@ -119,21 +121,34 @@ void LevelC::initialise() {
         PLAYER
     );
 
-    m_game_state.enemy = new Entity(
+
+    m_game_state.enemies = new Entity * [1];
+
+    // Initialize the enemy
+    m_game_state.enemies[0] = new Entity(
         enemy_texture_id,         // texture id
-        5.0f,                      // speed
+        6.0f,                     // speed
         enemy_acceleration,       // acceleration
-        3.0f,                      // jumping power
+        3.0f,                     // jumping power
         enemy_walking_animation,  // animation index sets
-        0.0f,                      // animation time
-        3,                         // animation frame amount
-        0,                         // current animation index
-        6,                         // animation column amount
-        6,                         // animation row amount
-        0.9f,                      // width
-        0.9f,                      // height
+        0.0f,                     // animation time
+        3,                        // animation frame amount
+        0,                        // current animation index
+        6,                        // animation column amount
+        6,                        // animation row amount
+        0.9f,                     // width
+        0.9f,                     // height
         ENEMY
     );
+
+
+    m_game_state.enemies[0]->set_position(glm::vec3(9.5f, -4.0f, 0.0f));
+    m_game_state.enemies[0]->face_up();
+
+
+    m_game_state.enemies[0]->deactivate();
+    m_enemy_active = false;
+    m_enemy_following = false;
 
     GLuint key_texture_id = Utility::load_texture(KEY_FILEPATH);
 
@@ -152,11 +167,8 @@ void LevelC::initialise() {
     m_key_position = glm::vec3(9.5f, -6.0f, 0.0f);
     m_key->set_position(m_key_position);
 
-    // Set player starting position
-    m_game_state.player->set_position(glm::vec3(9.0f, -13.0f, 0.0f));
 
-    // set final enemy starting position
-    m_game_state.enemy->set_position(glm::vec3(9.0f, -13.0f, 0.0f));
+    m_game_state.player->set_position(glm::vec3(9.0f, -13.0f, 0.0f));
 
     // Jumping
     m_game_state.player->set_jumping_power(5.0f);
@@ -171,17 +183,13 @@ void LevelC::initialise() {
 }
 
 void LevelC::process_input() {
-    // If the game is frozen, ignore player input but still check for quit events
     if (m_game_frozen) {
-        // Set player movement to zero to ensure they stop
         m_game_state.player->set_movement(glm::vec3(0.0f));
-        return; // Skip the rest of input processing
+        return; 
     }
 
-    // Normal input processing when not frozen
     m_game_state.player->set_movement(glm::vec3(0.0f));
 
-    // Set default speed (walking speed)
     float walking_speed = 5.0f;
     float sprint_speed = 8.0f;
 
@@ -204,24 +212,133 @@ void LevelC::process_input() {
         m_game_state.player->normalise_movement();
 }
 
+bool LevelC::check_collision_in_direction(Entity* entity, glm::vec3 direction) {
+    // Check if there's a collision in the given direction
+    glm::vec3 test_position = entity->get_position() + direction * 0.5f;
+
+    // Create a probe point in the direction we're checking
+    float penetration_x = 0;
+    float penetration_y = 0;
+
+    return m_game_state.map->is_solid(test_position, &penetration_x, &penetration_y);
+}
+
+void LevelC::update_enemy(float delta_time) {
+    // If enemy is not active, don't update
+    if (!m_enemy_active) {
+        return;
+    }
+
+    if (m_game_frozen) {
+        m_game_state.enemies[0]->set_movement(glm::vec3(0.0f));
+        return;
+    }
+
+    // If enemy is not following yet, don't move
+    if (!m_enemy_following) {
+        m_game_state.enemies[0]->set_movement(glm::vec3(0.0f));
+        return;
+    }
+
+    glm::vec3 enemy_pos = m_game_state.enemies[0]->get_position();
+    glm::vec3 player_pos = m_game_state.player->get_position();
+
+    // Calculate direction to player
+    glm::vec3 direction = glm::normalize(player_pos - enemy_pos);
+
+    // Check for obstacles in the current direction
+    bool obstacle_ahead = false;
+
+    // Determine which direction the enemy is currently facing
+    glm::vec3 facing_direction(0.0f);
+    if (m_game_state.enemies[0]->get_movement().x > 0) {
+        facing_direction = glm::vec3(1.0f, 0.0f, 0.0f); // Right
+    }
+    else if (m_game_state.enemies[0]->get_movement().x < 0) {
+        facing_direction = glm::vec3(-1.0f, 0.0f, 0.0f); // Left
+    }
+    else if (m_game_state.enemies[0]->get_movement().y > 0) {
+        facing_direction = glm::vec3(0.0f, 1.0f, 0.0f); // Up
+    }
+    else if (m_game_state.enemies[0]->get_movement().y < 0) {
+        facing_direction = glm::vec3(0.0f, -1.0f, 0.0f); // Down
+    }
+
+    // Check if there's an obstacle in the facing direction
+    if (glm::length(facing_direction) > 0) {
+        obstacle_ahead = check_collision_in_direction(m_game_state.enemies[0], facing_direction);
+    }
+
+    // Reset enemy movement
+    m_game_state.enemies[0]->set_movement(glm::vec3(0.0f));
+
+    // If there's an obstacle ahead, change direction toward player
+    if (obstacle_ahead) {
+        // Determine if horizontal or vertical movement is better
+        float x_diff = std::abs(player_pos.x - enemy_pos.x);
+        float y_diff = std::abs(player_pos.y - enemy_pos.y);
+
+        if (x_diff > y_diff) {
+            // Try horizontal movement
+            if (player_pos.x > enemy_pos.x) {
+                m_game_state.enemies[0]->move_right();
+            }
+            else {
+                m_game_state.enemies[0]->move_left();
+            }
+        }
+        else {
+            // Try vertical movement
+            if (player_pos.y > enemy_pos.y) {
+                m_game_state.enemies[0]->move_up();
+            }
+            else {
+                m_game_state.enemies[0]->move_down();
+            }
+        }
+    }
+    else {
+        // No obstacle, move directly toward player
+        if (std::abs(direction.x) > std::abs(direction.y)) {
+            // Move horizontally
+            if (direction.x > 0) {
+                m_game_state.enemies[0]->move_right();
+            }
+            else {
+                m_game_state.enemies[0]->move_left();
+            }
+        }
+        else {
+            // Move vertically
+            if (direction.y > 0) {
+                m_game_state.enemies[0]->move_up();
+            }
+            else {
+                m_game_state.enemies[0]->move_down();
+            }
+        }
+    }
+}
+
 void LevelC::update(float delta_time) {
-    // Handle the freeze timer if the game is frozen
     if (m_game_frozen) {
         m_freeze_timer -= delta_time;
 
-        // If the freeze timer is up, unfreeze the game
+        // If the freeze timer is up, unfreeze
         if (m_freeze_timer <= 0.0f) {
             m_game_frozen = false;
+
+            // Start the enemy following when the game unfreezes
+            if (m_enemy_active && !m_enemy_following) {
+                m_enemy_following = true;
+            }
         }
-        return; // Skip the rest of the update when frozen
     }
 
     // Update key position if it's spawned and not collected
     if (m_key_spawned && !m_key_collected) {
-        // Set the key position - this will actually update the position
         m_key->set_position(m_key_position);
 
-        // Add this line to update the key entity
         m_key->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
     }
 
@@ -230,6 +347,35 @@ void LevelC::update(float delta_time) {
 
     // Update player
     m_game_state.player->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
+
+    // Update enemy timer if active but not following
+    if (m_enemy_active && !m_enemy_following) {
+        if (m_enemy_timer > 0) {
+            m_enemy_timer -= delta_time;
+            if (m_enemy_timer <= 0) {
+                // Timer expired, start following
+                m_enemy_following = true;
+
+                // If enemy was transferred from another level, place it at entry position
+                if (m_game_state.enemies[0]->get_position().y < -20.0f) {
+                    m_game_state.enemies[0]->set_position(glm::vec3(9.0f, -12.0f, 0.0f));
+                }
+            }
+        }
+    }
+
+    // Update enemy
+    update_enemy(delta_time);
+
+    // If enemy is active, update it
+    if (m_enemy_active) {
+        m_game_state.enemies[0]->update(delta_time, m_game_state.player, NULL, 0, m_game_state.map);
+
+        // Check for collision with player
+        if (m_enemy_following && m_game_state.enemies[0]->check_collision(m_game_state.player)) {
+            m_game_state.next_scene_id = 2;
+        }
+    }
 
     if (m_key_spawned && !m_key_collected) {
         if (m_game_state.player->check_collision(m_key)) {
@@ -243,40 +389,40 @@ void LevelC::update(float delta_time) {
             // Force player to stop moving
             m_game_state.player->set_movement(glm::vec3(0.0f));
             m_game_state.player->set_velocity(glm::vec3(0.0f));
+
+            // Activate enemy
+            m_game_state.enemies[0]->activate();
+            m_game_state.enemies[0]->face_down();
+            m_enemy_active = true;
+            m_enemy_following = false; 
         }
     }
 
     // Check if player is at the bottom of the level to go back to Level B
     if (m_game_state.player->get_position().y <= -14.0f) {
-        m_game_state.next_scene_id = 1;  // 1 will represent going back to Level B
-
-        // If the player has collected the final key, make sure this state is preserved
-        if (m_key_collected) {
-            // We'll handle this in main.cpp when transitioning between scenes
-            // The key collected state will be passed to LevelA
-        }
+        m_game_state.next_scene_id = 1;  
     }
 }
 
 void LevelC::render(ShaderProgram* program) {
-    // Render in layers: background first, then main map, then entities
     m_game_state.map->render(program);
 
-    // Render the player
     m_game_state.player->render(program);
 
-    m_game_state.enemy->render(program);
+    // Render the enemy if active
+    if (m_enemy_active) {
+        m_game_state.enemies[0]->render(program);
+    }
 
-    // Render the key if it's spawned and not collected
     if (m_key_spawned && !m_key_collected && m_key->is_active()) {
         m_key->render(program);
     }
 
     if (m_key_collected) {
-        // Save the current view matrix - we'll create a new one for UI
-        glm::mat4 original_view_matrix = glm::mat4(1.0f); // Identity matrix
+        // Save the current view matrix
+        glm::mat4 original_view_matrix = glm::mat4(1.0f); 
 
-        // Set up UI view (fixed position regardless of camera)
+        // Set up UI view
         glm::mat4 ui_view_matrix = glm::mat4(1.0f);
         program->set_view_matrix(ui_view_matrix);
 
@@ -302,7 +448,6 @@ void LevelC::render(ShaderProgram* program) {
         glDisableVertexAttribArray(program->get_position_attribute());
         glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
 
-        // Restore the original view matrix for the next frame
         program->set_view_matrix(original_view_matrix);
     }
 }

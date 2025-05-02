@@ -48,14 +48,12 @@ void Entity::ai_guard(Entity* player)
 
     // Check if the enemy has reached the bottom boundary
     if (m_position.y <= BOTTOM_BOUNDARY) {
-        // Deactivate the enemy when it reaches the bottom
         deactivate(); 
         return;
     }
 
     switch (m_ai_state) {
     case IDLE:
-        // Stay in place until player is detected within both x and y ranges
         m_movement = glm::vec3(0.0f, 0.0f, 0.0f);
 
         // If player is within both x and y detection ranges, switch to walking state
@@ -65,9 +63,9 @@ void Entity::ai_guard(Entity* player)
         break;
 
     case WALKING:
-        // When in walking state, move directly down the y-axis
+        // When in walking state, move directly down
         m_movement = glm::vec3(0.0f, -1.0f, 0.0f);
-        face_down(); // Make sure the enemy is facing down
+        face_down(); 
         break;
 
     case ATTACKING:
@@ -364,7 +362,6 @@ void Entity::update(float delta_time, Entity* player, Entity* collidable_entitie
     m_velocity.x = m_movement.x * m_speed;
     m_velocity.y = m_movement.y * m_speed;
 
-    // No acceleration applied (removing gravity effect)
     // m_velocity += m_acceleration * delta_time;
 
     m_position.y += m_velocity.y * delta_time;

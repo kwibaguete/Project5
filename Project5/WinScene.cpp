@@ -3,7 +3,6 @@
 #include "Utility.h"
 
 WinScene::WinScene() {
-    // Initialize member variables
     win_message = "YOU WIN!";
     restart_prompt = "PRESS ENTER TO PLAY AGAIN";
 }
@@ -21,13 +20,10 @@ void WinScene::update(float delta_time) {
 }
 
 void WinScene::render(ShaderProgram* program) {
-    // Set the viewport for the menu (centered)
     glm::mat4 view_matrix = glm::mat4(1.0f);
     program->set_view_matrix(view_matrix);
 
-    // Render the win message (larger text, positioned at the top center)
     Utility::draw_text(program, font_texture_id, win_message, 0.4f, 0.2f, glm::vec3(-4.0f, 2.0f, 0.0f));
 
-    // Render the restart prompt (positioned below the message)
     Utility::draw_text(program, font_texture_id, restart_prompt, 0.25f, 0.05f, glm::vec3(-4.0f, 0.0f, 0.0f));
 }

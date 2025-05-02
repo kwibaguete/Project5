@@ -22,6 +22,7 @@
 #include "Entity.h"
 #include "Map.h"
 #include "Scene.h"
+#include "MenuScene.h"
 #include "LevelA.h"
 #include "LevelB.h"
 #include "LevelC.h"
@@ -50,17 +51,18 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 
 enum AppStatus { RUNNING, TERMINATED };
-enum GameMode { LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE, WIN_SCENE }; // Add WIN_SCENE to GameMode
+enum GameMode { MENU_SCENE, LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE, WIN_SCENE }; 
 
 // ————— VARIABLES ————— //
 Scene* g_current_scene;
+MenuScene* g_menu_scene;
 LevelA* g_level_a;
 LevelB* g_level_b;
 LevelC* g_level_c;
-LoseScene* g_lose_scene; // Add LoseScene pointer
-WinScene* g_win_scene; // Add WinScene pointer
-GameMode g_current_mode = LEVEL_A;
-GameMode g_previous_mode = LEVEL_A; // Track the previous mode for transitions
+LoseScene* g_lose_scene;
+WinScene* g_win_scene;
+GameMode g_current_mode = MENU_SCENE; // Start with menu scene
+GameMode g_previous_mode = MENU_SCENE;
 
 // Track if the player has collected the final key
 bool g_has_final_key = false;
@@ -115,18 +117,20 @@ void initialise()
 
     glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 
-    // Initialize our levels
+    // Initialize our scenes
+    g_menu_scene = new MenuScene();
+    g_menu_scene->initialise();
+
     g_level_a = new LevelA();
     g_level_b = new LevelB();
     g_level_c = new LevelC();
-    g_lose_scene = new LoseScene(); // Initialize LoseScene
-    g_lose_scene->initialise(); // Initialize the lose scene
-    g_win_scene = new WinScene(); // Initialize WinScene
-    g_win_scene->initialise(); // Initialize the win scene
+    g_lose_scene = new LoseScene();
+    g_lose_scene->initialise();
+    g_win_scene = new WinScene();
+    g_win_scene->initialise();
 
-    // Set the current scene to level A
-    g_current_scene = g_level_a;
-    g_current_scene->initialise();
+    // Set the current scene to menu scene
+    g_current_scene = g_menu_scene;
 
     // ————— BLENDING ————— //
     glEnable(GL_BLEND);
@@ -156,7 +160,7 @@ void process_input()
                 g_previous_mode = g_current_mode;
                 g_current_mode = LEVEL_A;
                 g_current_scene = g_level_a;
-                g_current_scene->initialise(); // Re-initialize the level
+                g_current_scene->initialise(); 
                 break;
 
             case SDLK_2:
@@ -164,7 +168,7 @@ void process_input()
                 g_previous_mode = g_current_mode;
                 g_current_mode = LEVEL_B;
                 g_current_scene = g_level_b;
-                g_current_scene->initialise(); // Re-initialize the level
+                g_current_scene->initialise(); 
                 break;
 
             case SDLK_3:
@@ -185,7 +189,10 @@ void process_input()
     }
 
     // Process level-specific input
-    if (g_current_mode == LEVEL_A) {
+    if (g_current_mode == MENU_SCENE) {
+        g_menu_scene->process_input();
+    }
+    else if (g_current_mode == LEVEL_A) {
         g_level_a->process_input();
     }
     else if (g_current_mode == LEVEL_B) {
@@ -194,7 +201,7 @@ void process_input()
     else if (g_current_mode == LEVEL_C) {
         g_level_c->process_input();
     }
-    // No input processing needed for lose scene
+
 }
 
 void update()
@@ -228,20 +235,33 @@ void update()
         }
     }
 
-    // Store the current scene's next_scene_id and current mode
     int next_scene = g_current_scene->get_state().next_scene_id;
     GameMode current_mode = g_current_mode;
 
     // Check if we need to switch scenes
     if (next_scene == 0 && g_current_mode != LEVEL_A) {
-        // Backtrack to Level A
+        // Switch to Level A
         g_previous_mode = g_current_mode;
         g_current_mode = LEVEL_A;
         g_current_scene = g_level_a;
-        g_current_scene->initialise();
-        // Set player position near where they would have entered from Level B
-        g_level_a->get_state().player->set_position(glm::vec3(7.0f, -2.0f, 0.0f));
-        // Reset next_scene_id to prevent immediate transition back
+
+        // Only initialize if coming from menu scene, otherwise use existing state
+        if (g_previous_mode == MENU_SCENE) {
+            g_current_scene->initialise();
+        }
+        else {
+            // Backtrack to Level A
+            g_level_a->get_state().player->set_position(glm::vec3(7.0f, -2.0f, 0.0f));
+
+            // Transfer enemy state from previous level
+            if (g_previous_mode == LEVEL_B && g_level_b->get_enemy_active()) {
+                g_level_a->set_enemy_active(true);
+                g_level_a->set_enemy_entry_position(glm::vec3(7.0f, -2.0f, 0.0f));
+                g_level_a->set_enemy_timer(1.0f); 
+                g_level_a->set_enemy_following(false); // Will start following after timer
+            }
+        }
+
         g_level_a->get_state().next_scene_id = -1;
     }
     else if (next_scene == 1 && g_current_mode != LEVEL_B) {
@@ -251,25 +271,37 @@ void update()
         g_current_scene = g_level_b;
         g_current_scene->initialise();
 
+        glm::vec3 entry_position;
+
         // Set player position based on which level we came from
         if (g_previous_mode == LEVEL_C) {
             // Coming from Level C, place player at top of Level B
-            g_level_b->get_state().player->set_position(glm::vec3(3.0f, -2.0f, 0.0f));
+            entry_position = glm::vec3(3.0f, -2.0f, 0.0f);
+            g_level_b->get_state().player->set_position(entry_position);
+
+            // Transfer enemy state from Level C
+            if (g_level_c->get_enemy_active()) {
+                g_level_b->set_enemy_active(true);
+                g_level_b->set_enemy_entry_position(entry_position);
+                g_level_b->set_enemy_timer(1.0f); 
+                g_level_b->set_enemy_following(false); // Will start following after timer
+            }
         }
         else {
             // Coming from Level A, place player at bottom of Level B
-            g_level_b->get_state().player->set_position(glm::vec3(17.0f, -12.0f, 0.0f));
+            entry_position = glm::vec3(17.0f, -12.0f, 0.0f);
+            g_level_b->get_state().player->set_position(entry_position);
+
+            // Transfer enemy state from Level A
+            if (g_level_a->get_enemy_active()) {
+                g_level_b->set_enemy_active(true);
+                g_level_b->set_enemy_entry_position(entry_position);
+                g_level_b->set_enemy_timer(1.0f); 
+                g_level_b->set_enemy_following(false); // Will start following after timer
+            }
         }
 
-        // Reset next_scene_id to prevent immediate transition back
         g_level_b->get_state().next_scene_id = -1;
-    }
-    else if (next_scene == 2 && g_current_mode != LOSE_SCENE) {
-        // Switch to lose scene when next_scene_id is 2
-        g_previous_mode = g_current_mode;
-        g_current_mode = LOSE_SCENE;
-        g_current_scene = g_lose_scene;
-        // No need to re-initialize the lose scene
     }
     else if (next_scene == 3 && g_current_mode != LEVEL_C) {
         // Switch to level C when next_scene_id is 3
@@ -277,21 +309,35 @@ void update()
         g_current_mode = LEVEL_C;
         g_current_scene = g_level_c;
         g_current_scene->initialise(); // Initialize level C
+
         // Set player position at bottom of Level C
-        g_level_c->get_state().player->set_position(glm::vec3(9.0f, -12.0f, 0.0f));
-        // Reset next_scene_id to prevent immediate transition back
+        glm::vec3 entry_position = glm::vec3(9.0f, -12.0f, 0.0f);
+        g_level_c->get_state().player->set_position(entry_position);
+
+        // Transfer enemy state from Level B
+        if (g_level_b->get_enemy_active()) {
+            g_level_c->set_enemy_active(true);
+            g_level_c->set_enemy_timer(1.0f);
+            g_level_c->set_enemy_following(false); // Will start following after timer
+        }
+
         g_level_c->get_state().next_scene_id = -1;
     }
+    else if (next_scene == 2 && g_current_mode != LOSE_SCENE) {
+        // Switch to lose
+        g_previous_mode = g_current_mode;
+        g_current_mode = LOSE_SCENE;
+        g_current_scene = g_lose_scene;
+    }
     else if (next_scene == 4 && g_current_mode != WIN_SCENE) {
-        // Switch to win scene when next_scene_id is 4
+        // Switch to win 
         g_previous_mode = g_current_mode;
         g_current_mode = WIN_SCENE;
         g_current_scene = g_win_scene;
-        // No need to re-initialize the win scene
     }
 
-    // Update camera to follow player, but only in gameplay scenes
-    if (g_current_mode != LOSE_SCENE && g_current_mode != WIN_SCENE) {
+    // Update camera to follow player
+    if (g_current_mode != MENU_SCENE && g_current_mode != LOSE_SCENE && g_current_mode != WIN_SCENE) {
         GameState state = g_current_scene->get_state();
         g_view_matrix = glm::mat4(1.0f);
         g_view_matrix = glm::translate(g_view_matrix, glm::vec3(
@@ -300,7 +346,6 @@ void update()
             0.0f));
     }
     else {
-        // Reset view matrix for lose/win scene (centered view)
         g_view_matrix = glm::mat4(1.0f);
     }
 }
@@ -309,6 +354,23 @@ void render()
 {
     g_shader_program.set_view_matrix(g_view_matrix);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    // Set light position to player position in world space
+    if (g_current_mode != MENU_SCENE && g_current_mode != LOSE_SCENE && g_current_mode != WIN_SCENE) {
+        GameState state = g_current_scene->get_state();
+
+        // Get player position
+        glm::vec3 player_position = state.player->get_position();
+
+        glm::vec4 transformed_position = g_view_matrix * glm::vec4(player_position, 1.0f);
+
+        // Set light position to match player position in screen space
+        g_shader_program.set_light_position(
+            transformed_position.x,
+            transformed_position.y,
+            0.0f
+        );
+    }
 
     // Render current scene
     g_current_scene->render(&g_shader_program);
@@ -321,6 +383,7 @@ void shutdown()
     SDL_Quit();
 
     // Clean up game state
+    delete g_menu_scene;
     delete g_level_a;
     delete g_level_b;
     delete g_level_c;
