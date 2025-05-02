@@ -25,7 +25,8 @@
 #include "LevelA.h"
 #include "LevelB.h"
 #include "LevelC.h"
-#include "LoseScene.h" 
+#include "LoseScene.h"
+#include "WinScene.h"
 
 // ————— CONSTANTS ————— //
 constexpr int WINDOW_WIDTH = 640 * 2,
@@ -49,7 +50,7 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 
 enum AppStatus { RUNNING, TERMINATED };
-enum GameMode { LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE }; // Add LOSE_SCENE to GameMode
+enum GameMode { LEVEL_A, LEVEL_B, LEVEL_C, LOSE_SCENE, WIN_SCENE }; // Add WIN_SCENE to GameMode
 
 // ————— VARIABLES ————— //
 Scene* g_current_scene;
@@ -57,7 +58,12 @@ LevelA* g_level_a;
 LevelB* g_level_b;
 LevelC* g_level_c;
 LoseScene* g_lose_scene; // Add LoseScene pointer
+WinScene* g_win_scene; // Add WinScene pointer
 GameMode g_current_mode = LEVEL_A;
+GameMode g_previous_mode = LEVEL_A; // Track the previous mode for transitions
+
+// Track if the player has collected the final key
+bool g_has_final_key = false;
 
 AppStatus g_app_status = RUNNING;
 SDL_Window* g_display_window;
@@ -112,9 +118,11 @@ void initialise()
     // Initialize our levels
     g_level_a = new LevelA();
     g_level_b = new LevelB();
-    g_level_c = new LevelC(); 
+    g_level_c = new LevelC();
     g_lose_scene = new LoseScene(); // Initialize LoseScene
     g_lose_scene->initialise(); // Initialize the lose scene
+    g_win_scene = new WinScene(); // Initialize WinScene
+    g_win_scene->initialise(); // Initialize the win scene
 
     // Set the current scene to level A
     g_current_scene = g_level_a;
@@ -145,6 +153,7 @@ void process_input()
 
             case SDLK_1:
                 // Switch to Level A
+                g_previous_mode = g_current_mode;
                 g_current_mode = LEVEL_A;
                 g_current_scene = g_level_a;
                 g_current_scene->initialise(); // Re-initialize the level
@@ -152,13 +161,15 @@ void process_input()
 
             case SDLK_2:
                 // Switch to Level B
+                g_previous_mode = g_current_mode;
                 g_current_mode = LEVEL_B;
                 g_current_scene = g_level_b;
                 g_current_scene->initialise(); // Re-initialize the level
                 break;
 
             case SDLK_3:
-                g_current_mode = LEVEL_B;
+                g_previous_mode = g_current_mode;
+                g_current_mode = LEVEL_C;
                 g_current_scene = g_level_c;
                 g_current_scene->initialise();
                 break;
@@ -179,6 +190,9 @@ void process_input()
     }
     else if (g_current_mode == LEVEL_B) {
         g_level_b->process_input();
+    }
+    else if (g_current_mode == LEVEL_C) {
+        g_level_c->process_input();
     }
     // No input processing needed for lose scene
 }
@@ -206,27 +220,78 @@ void update()
 
     g_accumulator = delta_time;
 
+    // Check if the player has collected the final key in Level C
+    if (g_current_mode == LEVEL_C) {
+        LevelC* level_c = dynamic_cast<LevelC*>(g_current_scene);
+        if (level_c && level_c->get_key_collected()) {
+            g_has_final_key = true;
+        }
+    }
+
+    // Store the current scene's next_scene_id and current mode
+    int next_scene = g_current_scene->get_state().next_scene_id;
+    GameMode current_mode = g_current_mode;
+
     // Check if we need to switch scenes
-    if (g_current_scene->get_state().next_scene_id == 1 && g_current_mode != LEVEL_B) {
+    if (next_scene == 0 && g_current_mode != LEVEL_A) {
+        // Backtrack to Level A
+        g_previous_mode = g_current_mode;
+        g_current_mode = LEVEL_A;
+        g_current_scene = g_level_a;
+        g_current_scene->initialise();
+        // Set player position near where they would have entered from Level B
+        g_level_a->get_state().player->set_position(glm::vec3(7.0f, -2.0f, 0.0f));
+        // Reset next_scene_id to prevent immediate transition back
+        g_level_a->get_state().next_scene_id = -1;
+    }
+    else if (next_scene == 1 && g_current_mode != LEVEL_B) {
+        // Transition to Level B (from either A or C)
+        g_previous_mode = g_current_mode;
         g_current_mode = LEVEL_B;
         g_current_scene = g_level_b;
         g_current_scene->initialise();
+
+        // Set player position based on which level we came from
+        if (g_previous_mode == LEVEL_C) {
+            // Coming from Level C, place player at top of Level B
+            g_level_b->get_state().player->set_position(glm::vec3(3.0f, -2.0f, 0.0f));
+        }
+        else {
+            // Coming from Level A, place player at bottom of Level B
+            g_level_b->get_state().player->set_position(glm::vec3(17.0f, -12.0f, 0.0f));
+        }
+
+        // Reset next_scene_id to prevent immediate transition back
+        g_level_b->get_state().next_scene_id = -1;
     }
-    else if (g_current_scene->get_state().next_scene_id == 2 && g_current_mode != LOSE_SCENE) {
+    else if (next_scene == 2 && g_current_mode != LOSE_SCENE) {
         // Switch to lose scene when next_scene_id is 2
+        g_previous_mode = g_current_mode;
         g_current_mode = LOSE_SCENE;
         g_current_scene = g_lose_scene;
         // No need to re-initialize the lose scene
     }
-    else if (g_current_scene->get_state().next_scene_id == 3 && g_current_mode != LEVEL_C) {
+    else if (next_scene == 3 && g_current_mode != LEVEL_C) {
         // Switch to level C when next_scene_id is 3
+        g_previous_mode = g_current_mode;
         g_current_mode = LEVEL_C;
         g_current_scene = g_level_c;
         g_current_scene->initialise(); // Initialize level C
+        // Set player position at bottom of Level C
+        g_level_c->get_state().player->set_position(glm::vec3(9.0f, -12.0f, 0.0f));
+        // Reset next_scene_id to prevent immediate transition back
+        g_level_c->get_state().next_scene_id = -1;
+    }
+    else if (next_scene == 4 && g_current_mode != WIN_SCENE) {
+        // Switch to win scene when next_scene_id is 4
+        g_previous_mode = g_current_mode;
+        g_current_mode = WIN_SCENE;
+        g_current_scene = g_win_scene;
+        // No need to re-initialize the win scene
     }
 
     // Update camera to follow player, but only in gameplay scenes
-    if (g_current_mode != LOSE_SCENE) {
+    if (g_current_mode != LOSE_SCENE && g_current_mode != WIN_SCENE) {
         GameState state = g_current_scene->get_state();
         g_view_matrix = glm::mat4(1.0f);
         g_view_matrix = glm::translate(g_view_matrix, glm::vec3(
@@ -235,7 +300,7 @@ void update()
             0.0f));
     }
     else {
-        // Reset view matrix for lose scene (centered view)
+        // Reset view matrix for lose/win scene (centered view)
         g_view_matrix = glm::mat4(1.0f);
     }
 }
@@ -258,7 +323,9 @@ void shutdown()
     // Clean up game state
     delete g_level_a;
     delete g_level_b;
+    delete g_level_c;
     delete g_lose_scene;
+    delete g_win_scene;
 }
 
 // ————— GAME LOOP ————— //

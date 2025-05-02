@@ -58,4 +58,7 @@ public:
 
     // Additional methods
     void process_input();
+
+    // Add this method to access the game state
+    GameState& get_state() { return m_game_state; }
 };

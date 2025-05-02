@@ -24,7 +24,8 @@ struct GameState
     //  GAME OBJECTS  //
     Map* map;
     Entity* player;
-    Entity** enemies;  
+    Entity** enemies;
+    Entity* enemy;
 
     //  AUDIO  //
     Mix_Music* bgm;
@@ -39,15 +40,15 @@ protected:
     GameState m_game_state;
 
 public:
-    // ————— ATTRIBUTES ————— //
+    // ----- ATTRIBUTES ----- //
     int m_number_of_enemies = 1;
 
-    // ————— METHODS ————— //
+    // ----- METHODS ----- //
     virtual void initialise() = 0;
     virtual void update(float delta_time) = 0;
     virtual void render(ShaderProgram* program) = 0;
 
-    // ————— GETTERS ————— //
+    // ----- GETTERS ----- //
     GameState const get_state() const { return m_game_state; }
     int const get_number_of_enemies() const { return m_number_of_enemies; }
 };

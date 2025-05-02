@@ -56,4 +56,10 @@ public:
 
     // Additional methods
     void process_input();
+
+    // Add this method to access the game state
+    GameState& get_state() { return m_game_state; }
+
+    // Add this method to get the key collected state
+    bool get_key_collected() const { return m_key_collected; }
 };

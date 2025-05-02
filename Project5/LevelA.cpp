@@ -2,6 +2,7 @@
 #include "Utility.h"
 
 LevelA::LevelA() {
+
     // Initialize level data arrays
     unsigned int level_data[] = {
         128, 131, 131, 131, 131, 131, 133, 80, 80, 132, 131, 131, 131, 131, 131, 131, 131, 131, 131, 117,
@@ -121,7 +122,7 @@ void LevelA::initialise() {
     m_key_collected = false;
 
     // Set player starting position to be in the middle of the wooden floor area
-    m_game_state.player->set_position(glm::vec3(7.0f, -14.0f, 0.0f));
+    m_game_state.player->set_position(glm::vec3(7.0f, -13.0f, 0.0f));
 
     // Jumping
     m_game_state.player->set_jumping_power(5.0f);
@@ -204,8 +205,8 @@ void LevelA::update(float delta_time) {
     if (!m_key_spawned && !m_key_collected &&
         tile_x >= 1 && tile_x <= 3 && tile_y == 6) {
 
-        float key_x = 2.0f; 
-        float key_y = -6.0f; 
+        float key_x = 2.0f;
+        float key_y = -6.0f;
 
         m_key_position = glm::vec3(key_x, key_y, 0.0f);
         m_key->set_position(m_key_position);
@@ -245,6 +246,40 @@ void LevelA::render(ShaderProgram* program) {
     // Render the player
     m_game_state.player->render(program);
 
+    //if (!m_key_collected && m_game_state.player->get_position().y >= -15.0f) {
+    //    // Display message and freeze the game
+    //    if (!m_game_frozen) {
+    //        // Only trigger this once when the condition is first met
+    //        m_game_frozen = true;
+    //        m_freeze_timer = 3.0f; // Set to 3 seconds instead of the default FREEZE_DURATION
+
+    //        // Force player to stop moving
+    //        m_game_state.player->set_movement(glm::vec3(0.0f));
+    //        m_game_state.player->set_velocity(glm::vec3(0.0f));
+    //    }
+
+    //    // Save the current view matrix for later restoration
+    //    glm::mat4 original_view_matrix = glm::mat4(1.0f);
+
+    //    // Set up UI view (fixed position regardless of camera)
+    //    glm::mat4 ui_view_matrix = glm::mat4(1.0f);
+    //    program->set_view_matrix(ui_view_matrix);
+
+    //    // Load the font texture (only once)
+    //    static GLuint font_texture_id = Utility::load_texture("assets/font1.png");
+
+    //    // Draw the text at the bottom of the screen
+    //    Utility::draw_text(program,
+    //        font_texture_id,
+    //        "Find a way to escape the mansion",
+    //        0.5f,   // text size
+    //        0.01f,  // spacing
+    //        glm::vec3(-7.0f, -5.0f, 0.0f)); // position at bottom of screen
+
+    //    // Restore the original view matrix
+    //    program->set_view_matrix(original_view_matrix);
+    //}
+
     // If key is collected, render it in the UI (top-right corner)
     if (m_key_collected) {
         // Save the current view matrix - we'll create a new one for UI
@@ -280,7 +315,19 @@ void LevelA::render(ShaderProgram* program) {
         program->set_view_matrix(original_view_matrix);
     }
 
+    // Check if player has the final key from Level C and is at the initial spawn point
+    // This uses the global variable g_has_final_key from main.cpp
+    extern bool g_has_final_key;
+    if (g_has_final_key &&
+        m_game_state.player->get_position().y <= -13.5f &&
+        m_game_state.player->get_position().y >= -14.5f &&
+        m_game_state.player->get_position().x >= 6.5f &&
+        m_game_state.player->get_position().x <= 7.5f) {
+        // Player has won the game!
+        m_game_state.next_scene_id = 4; // Assuming 4 is the WinScene ID
+    }
+
     if (m_key_collected == true && m_game_state.player->get_position().y >= -1.0f) {
-        m_game_state.next_scene_id = 1; 
+        m_game_state.next_scene_id = 1;
     }
 }

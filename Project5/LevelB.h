@@ -57,4 +57,7 @@ public:
     // Additional methods
     void process_input();
     void check_player_enemy_collision(); // Add this method declaration
+
+    // Add this method to access the game state
+    GameState& get_state() { return m_game_state; }
 };

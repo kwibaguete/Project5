@@ -119,21 +119,21 @@ void LevelC::initialise() {
         PLAYER
     );
 
-    //m_game_state.enemies = new Entity(
-    //    enemy_texture_id,         // texture id
-    //    5.0f,                      // speed
-    //    enemy_acceleration,       // acceleration
-    //    3.0f,                      // jumping power
-    //    enemy_walking_animation,  // animation index sets
-    //    0.0f,                      // animation time
-    //    3,                         // animation frame amount
-    //    0,                         // current animation index
-    //    6,                         // animation column amount
-    //    6,                         // animation row amount
-    //    0.9f,                      // width
-    //    0.9f,                      // height
-    //    PLAYER
-    //);
+    m_game_state.enemy = new Entity(
+        enemy_texture_id,         // texture id
+        5.0f,                      // speed
+        enemy_acceleration,       // acceleration
+        3.0f,                      // jumping power
+        enemy_walking_animation,  // animation index sets
+        0.0f,                      // animation time
+        3,                         // animation frame amount
+        0,                         // current animation index
+        6,                         // animation column amount
+        6,                         // animation row amount
+        0.9f,                      // width
+        0.9f,                      // height
+        ENEMY
+    );
 
     GLuint key_texture_id = Utility::load_texture(KEY_FILEPATH);
 
@@ -154,6 +154,9 @@ void LevelC::initialise() {
 
     // Set player starting position
     m_game_state.player->set_position(glm::vec3(9.0f, -13.0f, 0.0f));
+
+    // set final enemy starting position
+    m_game_state.enemy->set_position(glm::vec3(9.0f, -13.0f, 0.0f));
 
     // Jumping
     m_game_state.player->set_jumping_power(5.0f);
@@ -241,9 +244,18 @@ void LevelC::update(float delta_time) {
             m_game_state.player->set_movement(glm::vec3(0.0f));
             m_game_state.player->set_velocity(glm::vec3(0.0f));
         }
-
     }
 
+    // Check if player is at the bottom of the level to go back to Level B
+    if (m_game_state.player->get_position().y <= -14.0f) {
+        m_game_state.next_scene_id = 1;  // 1 will represent going back to Level B
+
+        // If the player has collected the final key, make sure this state is preserved
+        if (m_key_collected) {
+            // We'll handle this in main.cpp when transitioning between scenes
+            // The key collected state will be passed to LevelA
+        }
+    }
 }
 
 void LevelC::render(ShaderProgram* program) {
@@ -252,6 +264,8 @@ void LevelC::render(ShaderProgram* program) {
 
     // Render the player
     m_game_state.player->render(program);
+
+    m_game_state.enemy->render(program);
 
     // Render the key if it's spawned and not collected
     if (m_key_spawned && !m_key_collected && m_key->is_active()) {
@@ -291,6 +305,4 @@ void LevelC::render(ShaderProgram* program) {
         // Restore the original view matrix for the next frame
         program->set_view_matrix(original_view_matrix);
     }
-
-
 }

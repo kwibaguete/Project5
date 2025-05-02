@@ -262,7 +262,15 @@ void LevelB::render(ShaderProgram* program) {
         }
     }
 
+    // Check if player is at the top of the level to go to Level C
     if (m_game_state.player->get_position().y >= -1.0f) {
-        m_game_state.next_scene_id = 3;  
+        m_game_state.next_scene_id = 3;
     }
+
+    // Check if player is at the bottom of the level to go back to Level A
+    if (m_game_state.player->get_position().y <= -14.0f) {
+        m_game_state.next_scene_id = 0;  // 0 will represent going back to Level A
+    }
+
+
 }
